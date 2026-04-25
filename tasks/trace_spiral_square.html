@@ -1,0 +1,33 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>
+<script>
+function drawGuide() {
+  const w = cssW(), h = cssH();
+  bctx.clearRect(0, 0, w, h);
+
+  const cx = w / 2, cy = h / 2;
+  const maxHalf = mmToPx(41.25), turns = 2.5;
+  const totalSides = Math.ceil(turns * 4);
+  const gap = maxHalf / turns;
+  const pts = [[cx, cy]];
+  let x = cx, y = cy, sideLen = gap / 2;
+  const dirs = [[-1,0],[0,1],[1,0],[0,-1]];
+  for (let s = 0; s < totalSides; s++) {
+    const [dx,dy] = dirs[s % 4];
+    x += dx * sideLen; y += dy * sideLen;
+    pts.push([x, y]);
+    if (s % 2 === 1) sideLen += gap / 2;
+  }
+
+  bctx.lineJoin = 'miter'; bctx.lineCap = 'round';
+  bctx.beginPath(); bctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) bctx.lineTo(pts[i][0], pts[i][1]);
+  bctx.strokeStyle = '#e8e8e8'; bctx.lineWidth = 10; bctx.stroke();
+  bctx.beginPath(); bctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) bctx.lineTo(pts[i][0], pts[i][1]);
+  bctx.strokeStyle = '#aaaaaa'; bctx.lineWidth = 2.25; bctx.stroke();
+  bctx.beginPath(); bctx.arc(cx, cy, 5, 0, Math.PI * 2);
+  bctx.fillStyle = '#999'; bctx.fill();
+
+  return { x: cx, y: cy };
+}
+</script></body></html>

@@ -1,0 +1,125 @@
+{
+  "tasks": [
+    {
+      "order": 1,
+      "task_name": "straight_line",
+      "task_type": "shape",
+      "orientation": "horizontal",
+      "repetitions": 3,
+      "canvas_html": "trace_line_horizontal.html",
+      "instruction": "Draw a straight horizontal line as smoothly as you can.",
+      "prompt": null,
+      "label": "Straight Line (H)"
+    },
+    {
+      "order": 2,
+      "task_name": "straight_line",
+      "task_type": "shape",
+      "orientation": "vertical",
+      "repetitions": 3,
+      "canvas_html": "trace_line_vertical.html",
+      "instruction": "Draw a straight vertical line as smoothly as you can.",
+      "prompt": null,
+      "label": "Straight Line (V)"
+    },
+    {
+      "order": 3,
+      "task_name": "arc",
+      "task_type": "shape",
+      "orientation": "horizontal",
+      "repetitions": 3,
+      "canvas_html": "trace_arc_horizontal.html",
+      "instruction": "Trace the arc guide as smoothly as you can.",
+      "prompt": null,
+      "label": "Arc (H)"
+    },
+    {
+      "order": 4,
+      "task_name": "arc",
+      "task_type": "shape",
+      "orientation": "vertical",
+      "repetitions": 3,
+      "canvas_html": "trace_arc_vertical.html",
+      "instruction": "Trace the arc guide as smoothly as you can.",
+      "prompt": null,
+      "label": "Arc (V)"
+    },
+    {
+      "order": 5,
+      "task_name": "wave",
+      "task_type": "shape",
+      "orientation": "horizontal",
+      "repetitions": 3,
+      "canvas_html": "trace_wave_horizontal.html",
+      "instruction": "Trace the wave guide as smoothly as you can.",
+      "prompt": null,
+      "label": "Wave (H)"
+    },
+    {
+      "order": 6,
+      "task_name": "wave",
+      "task_type": "shape",
+      "orientation": "vertical",
+      "repetitions": 3,
+      "canvas_html": "trace_wave_vertical.html",
+      "instruction": "Trace the wave guide as smoothly as you can.",
+      "prompt": null,
+      "label": "Wave (V)"
+    },
+    {
+      "order": 7,
+      "task_name": "spiral_round",
+      "task_type": "shape",
+      "orientation": null,
+      "repetitions": 6,
+      "canvas_html": "trace_spiral_round.html",
+      "instruction": "Trace the spiral starting from the centre dot and working outward.",
+      "prompt": null,
+      "label": "Round Spiral"
+    },
+    {
+      "order": 8,
+      "task_name": "spiral_square",
+      "task_type": "shape",
+      "orientation": null,
+      "repetitions": 6,
+      "canvas_html": "trace_spiral_square.html",
+      "instruction": "Trace the square spiral starting from the centre dot and working outward.",
+      "prompt": null,
+      "label": "Square Spiral"
+    },
+    {
+      "order": 9,
+      "task_name": "healthy_control",
+      "task_type": "writing",
+      "orientation": null,
+      "repetitions": 1,
+      "canvas_html": "trace_writing_lines.html",
+      "instruction": "Write the words shown below clearly and naturally, on the lines provided.",
+      "prompt": "Healthy Control",
+      "label": "Healthy Control"
+    },
+    {
+      "order": 10,
+      "task_name": "parkinsons_disease",
+      "task_type": "writing",
+      "orientation": null,
+      "repetitions": 1,
+      "canvas_html": "trace_writing_lines.html",
+      "instruction": "Write the words shown below clearly and naturally, on the lines provided.",
+      "prompt": "Parkinsons Disease",
+      "label": "Parkinson's Disease"
+    },
+    {
+      "order": 11,
+      "task_name": "sentence",
+      "task_type": "writing",
+      "orientation": null,
+      "repetitions": 1,
+      "canvas_html": "trace_writing_lines.html",
+      "instruction": "Copy the sentence below in your natural handwriting, on the lines provided.",
+      "prompt": "The quick brown fox jumps over the lazy dog.",
+      "label": "Sentence"
+    }
+  ]
+}

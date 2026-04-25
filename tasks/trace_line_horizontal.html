@@ -1,0 +1,22 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>
+<script>
+function drawGuide() {
+  const w = cssW(), h = cssH();
+  bctx.clearRect(0, 0, w, h);
+
+  const lineLen = mmToPx(110);
+  const cx = w / 2, cy = h / 2;
+  const x0 = cx - lineLen / 2;
+  const x1 = cx + lineLen / 2;
+
+  bctx.lineCap = 'round';
+  bctx.beginPath(); bctx.moveTo(x0, cy); bctx.lineTo(x1, cy);
+  bctx.strokeStyle = '#e8e8e8'; bctx.lineWidth = 10; bctx.stroke();
+  bctx.beginPath(); bctx.moveTo(x0, cy); bctx.lineTo(x1, cy);
+  bctx.strokeStyle = '#aaaaaa'; bctx.lineWidth = 2.25; bctx.stroke();
+  bctx.beginPath(); bctx.arc(x0, cy, 5, 0, Math.PI * 2);
+  bctx.fillStyle = '#888'; bctx.fill();
+
+  return { x: x0, y: cy };
+}
+</script></body></html>

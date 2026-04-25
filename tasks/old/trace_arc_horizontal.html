@@ -1,0 +1,37 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>
+<script>
+// ── Arc — Horizontal ─────────────────────────────────────────
+
+function drawGuide() {
+  const w = cssW(), h = cssH();
+  bctx.clearRect(0, 0, w, h);
+
+  const chord   = mmToPx(160);
+  const sagitta = mmToPx(40);
+  const cx = w / 2, cy = h / 2;
+  const x0 = cx - chord / 2;
+  const x1 = cx + chord / 2;
+
+  const halfChord = chord / 2;
+  const R = (sagitta * sagitta + halfChord * halfChord) / (2 * sagitta);
+  const circCx = cx;
+  const circCy = cy + (R - sagitta);
+
+  const angleStart = Math.atan2(cy - circCy, x0 - circCx);
+  const angleEnd   = Math.atan2(cy - circCy, x1 - circCx);
+
+  function drawArc() {
+    bctx.beginPath();
+    bctx.arc(circCx, circCy, R, angleStart, angleEnd, false);
+  }
+
+  bctx.lineCap = 'round';
+  drawArc(); bctx.strokeStyle = '#e8e8e8'; bctx.lineWidth = 10;   bctx.stroke();
+  drawArc(); bctx.strokeStyle = '#aaaaaa'; bctx.lineWidth = 2.25; bctx.stroke();
+
+  bctx.beginPath(); bctx.arc(x0, cy, 5, 0, Math.PI * 2);
+  bctx.fillStyle = '#888'; bctx.fill();
+
+  return { x: x0, y: cy };   // start dot = origin
+}
+</script></body></html>

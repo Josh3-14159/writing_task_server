@@ -1,0 +1,22 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>
+<script>
+// ── Writing Lines ────────────────────────────────────────────
+
+function drawGuide() {
+  const w = cssW(), h = cssH();
+  bctx.clearRect(0, 0, w, h);
+
+  const spacing = mmToPx(14);
+  const startY  = h * 0.33;
+  const padX    = 28;
+
+  bctx.strokeStyle = '#b8c4d8'; bctx.lineWidth = 1;
+  for (let i = 0; i < 2; i++) {
+    const y = startY + i * spacing;
+    bctx.beginPath(); bctx.moveTo(padX, y); bctx.lineTo(w - padX, y); bctx.stroke();
+  }
+
+  // Origin: left end of the first baseline
+  return { x: padX, y: startY };
+}
+</script></body></html>

@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Handwriting Study</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --surface: #f7f7f7;
+    --border: #e0e0e0;
+    --accent: #1a1a1a;
+    --accent-bright: #0057ff;
+    --text: #1a1a1a;
+    --muted: #888;
+    --danger: #cc2200;
+    --danger-bg: #fff5f5;
+    --warn: #7a5500;
+    --warn-bg: #fffbe6;
+    --warn-border: #e0c850;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+
+    --fs-body: 17px;
+    --fs-small: 14px;
+    --fs-label: 16px;
+    --fs-hint: 13px;
+    --fs-mono-sm: 13px;
+    --btn-min-h: 52px;
+    --input-min-h: 52px;
+    --tap-min: 48px;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: var(--fs-body);
+    overflow: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .hidden { display: none !important; }
+
+  /* ── buttons ── */
+  .btn {
+    font-family: var(--mono);
+    font-size: var(--fs-mono-sm);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    min-height: var(--btn-min-h);
+    padding: 0 22px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.35; pointer-events: none; }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.danger  { color: var(--danger); border-color: #ffd0d4; }
+
+  /* ════════════════════════════════════════
+     LOADING SCREEN
+  ════════════════════════════════════════ */
+  #loading-screen {
+    position: fixed; inset: 0; background: var(--bg); z-index: 500;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #loading-screen span {
+    font-family: var(--mono); font-size: var(--fs-mono-sm);
+    letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted);
+  }
+
+  /* ════════════════════════════════════════
+     RETURNING PARTICIPANT INTERSTITIALS
+  ════════════════════════════════════════ */
+  .interstitial {
+    position: fixed; inset: 0; background: var(--bg); z-index: 450;
+    display: flex; align-items: center; justify-content: center; padding: 40px;
+  }
+  .interstitial-inner {
+    max-width: 520px; width: 100%;
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 36px 32px;
+  }
+  .interstitial .tag {
+    font-family: var(--mono); font-size: var(--fs-mono-sm);
+    letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 16px; display: block;
+  }
+  .interstitial h2 { font-size: 22px; font-weight: 500; margin-bottom: 12px; }
+  .interstitial p {
+    font-size: var(--fs-body); color: #555;
+    line-height: 1.65; margin-bottom: 28px;
+  }
+  .interstitial-btns { display: flex; gap: 12px; }
+
+  /* warning variant */
+  #restart-screen .interstitial-inner { border-color: #ffd0d4; background: var(--danger-bg); }
+  #restart-screen .tag                { color: var(--danger); }
+
+  /* already-completed variant */
+  #completed-warn-screen .interstitial-inner { border-color: var(--warn-border); background: var(--warn-bg); }
+  #completed-warn-screen .tag                { color: var(--warn); }
+
+  /* ════════════════════════════════════════
+     INTAKE FORM
+  ════════════════════════════════════════ */
+  #intake-overlay {
+    position: fixed; inset: 0; background: var(--bg); z-index: 200;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+    -webkit-user-select: text; user-select: text; touch-action: auto;
+  }
+
+  .intake-inner { max-width: 660px; margin: 0 auto; padding: 48px 28px 100px; }
+
+  .intake-logo {
+    font-family: var(--mono); font-size: var(--fs-mono-sm);
+    letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 32px;
+  }
+  .intake-inner h1 {
+    font-size: 28px; font-weight: 500;
+    line-height: 1.25; margin-bottom: 10px; letter-spacing: -0.01em;
+  }
+  .intake-inner .subtitle {
+    font-size: var(--fs-body); color: var(--muted);
+    margin-bottom: 36px; line-height: 1.6;
+  }
+
+  .instructions {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 22px 26px; margin-bottom: 40px;
+  }
+  .instructions h2 {
+    font-size: var(--fs-mono-sm); font-family: var(--mono);
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 14px;
+  }
+  .instructions ol { padding-left: 20px; display: flex; flex-direction: column; gap: 10px; }
+  .instructions li { font-size: var(--fs-body); line-height: 1.6; }
+  .instructions li strong { font-weight: 500; }
+
+  .section-label {
+    font-family: var(--mono); font-size: var(--fs-mono-sm);
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+    margin-bottom: 16px; margin-top: 36px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .field { margin-bottom: 22px; }
+  .field .field-label { display: block; font-size: var(--fs-label); font-weight: 500; margin-bottom: 8px; }
+  .field .field-label .req { color: var(--danger); margin-left: 3px; }
+  .field .hint { font-size: var(--fs-hint); color: var(--muted); margin-top: 6px; line-height: 1.5; }
+
+  .field input[type="number"],
+  .field input[type="text"],
+  .field select {
+    width: 100%; min-height: var(--input-min-h);
+    padding: 12px 14px; font-family: var(--sans); font-size: var(--fs-body);
+    border: 1px solid var(--border); border-radius: 6px;
+    background: var(--bg); color: var(--text);
+    appearance: none; -webkit-appearance: none;
+    outline: none; transition: border-color 0.15s;
+  }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+
+  .radio-group { display: flex; flex-direction: column; gap: 10px; }
+  .radio-group.inline { flex-direction: row; flex-wrap: wrap; gap: 10px; }
+
+  .radio-option {
+    display: flex; align-items: center; gap: 14px;
+    min-height: var(--tap-min); padding: 12px 16px;
+    border: 1px solid var(--border); border-radius: 6px;
+    cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  }
+  .radio-option.inline { flex: 1; min-width: 90px; justify-content: center; }
+  .radio-option:has(input:checked) { border-color: var(--accent); background: var(--surface); }
+  .radio-option input { flex-shrink: 0; accent-color: var(--accent); width: 20px; height: 20px; cursor: pointer; }
+  .radio-option span { font-size: var(--fs-body); line-height: 1.4; }
+
+  .consent-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 22px 26px; margin-bottom: 22px;
+  }
+  .consent-box h2 {
+    font-size: var(--fs-mono-sm); font-family: var(--mono);
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 16px;
+  }
+  .consent-box p { font-size: var(--fs-small); line-height: 1.75; color: #444; margin-bottom: 12px; }
+  .consent-box p:last-of-type { margin-bottom: 0; }
+
+  .consent-checks { margin-top: 20px; display: flex; flex-direction: column; gap: 12px; }
+  .consent-check {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 14px 16px; border: 1px solid var(--border); border-radius: 6px;
+    cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  }
+  .consent-check:has(input:checked) { border-color: var(--accent); background: #f0f0f0; }
+  .consent-check input { margin-top: 2px; flex-shrink: 0; accent-color: var(--accent); width: 22px; height: 22px; cursor: pointer; }
+  .consent-check span { font-size: var(--fs-body); line-height: 1.55; }
+
+  #form-error {
+    display: none; background: var(--danger-bg);
+    border: 1px solid #ffcccc; border-radius: 6px;
+    padding: 14px 18px; font-size: var(--fs-body);
+    color: var(--danger); margin-bottom: 18px; line-height: 1.5;
+  }
+  #form-error.visible { display: block; }
+
+  #btn-begin {
+    width: 100%; min-height: 60px;
+    font-family: var(--mono); font-size: 15px;
+    font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
+    background: var(--accent); color: #fff; border: none;
+    border-radius: 6px; cursor: pointer;
+  }
+  #btn-begin:active { opacity: 0.82; }
+  .intake-footer { margin-top: 28px; font-size: var(--fs-hint); color: var(--muted); line-height: 1.6; text-align: center; }
+
+  /* ════════════════════════════════════════
+     TASK SCREEN
+  ════════════════════════════════════════ */
+  #task-screen {
+    position: fixed; inset: 0; background: var(--bg); z-index: 190;
+    display: flex; flex-direction: column;
+  }
+
+  /* progress bar — horizontally scrollable when many tasks */
+  #progress-bar {
+    display: flex; align-items: stretch;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    flex-shrink: 0; overflow-x: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;
+  }
+  #progress-bar::-webkit-scrollbar { display: none; }
+
+  .progress-step {
+    flex: 0 0 auto; min-width: 60px;
+    padding: 11px 10px; text-align: center;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.07em;
+    text-transform: uppercase; color: var(--muted);
+    border-right: 1px solid var(--border);
+    transition: background 0.2s, color 0.2s; line-height: 1.3;
+    white-space: nowrap;
+  }
+  .progress-step:last-child { border-right: none; }
+  .progress-step.active { background: var(--accent); color: #fff; }
+  .progress-step.done { color: var(--accent); }
+
+  /* task header */
+  #task-header {
+    padding: 14px 22px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0; background: var(--bg);
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  }
+  #task-header-left { flex: 1; min-width: 0; }
+  #task-title {
+    font-family: var(--mono); font-size: var(--fs-mono-sm);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 4px;
+  }
+  #task-instruction { font-size: 17px; font-weight: 500; line-height: 1.4; }
+
+  /* repetition pill */
+  #rep-indicator {
+    flex-shrink: 0; align-self: center;
+    font-family: var(--mono); font-size: var(--fs-mono-sm);
+    letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    white-space: nowrap;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+  }
+  #rep-indicator.multi {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: #f0f0f0;
+  }
+
+  /* prompt banner */
+  #prompt-banner {
+    padding: 14px 22px;
+    background: #fffbe6; border-bottom: 1px solid #e0d060;
+    font-size: 20px; font-style: italic;
+    color: #4a3c00; line-height: 1.5; flex-shrink: 0;
+  }
+
+  /* canvas area */
+  #task-canvas-wrap {
+    flex: 1; position: relative; overflow: hidden;
+    background: var(--bg);
+  }
+  #task-canvas, #baseline-canvas {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    touch-action: none;
+  }
+  #baseline-canvas { pointer-events: none; }
+
+  /* task footer */
+  #task-footer {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 18px;
+    background: var(--surface); border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  #task-stats {
+    font-family: var(--mono); font-size: var(--fs-mono-sm);
+    color: var(--muted); margin-right: auto;
+  }
+  #task-stats span { color: var(--text); }
+  #task-live { font-family: var(--mono); font-size: var(--fs-mono-sm); color: var(--muted); }
+  #task-live.active { color: var(--accent-bright); }
+
+  /* ════════════════════════════════════════
+     SAVE MODAL
+  ════════════════════════════════════════ */
+  #save-modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45); z-index: 300;
+    align-items: center; justify-content: center;
+  }
+  #save-modal-overlay.visible { display: flex; }
+
+  #save-modal {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 30px; width: min(460px, 92vw);
+    display: flex; flex-direction: column; gap: 18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.14);
+  }
+  #save-modal h2 {
+    font-family: var(--mono); font-size: var(--fs-mono-sm);
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  #save-modal p { font-size: var(--fs-body); color: var(--muted); line-height: 1.5; }
+  #save-modal-btns { display: flex; gap: 12px; justify-content: flex-end; margin-top: 4px; }
+  #save-status { font-size: var(--fs-body); color: var(--accent-bright); min-height: 24px; font-family: var(--mono); }
+
+  /* ════════════════════════════════════════
+     COMPLETION
+  ════════════════════════════════════════ */
+  #complete-screen {
+    position: fixed; inset: 0; background: var(--bg); z-index: 180;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 22px; padding: 48px; text-align: center;
+  }
+  #complete-screen .tag {
+    font-family: var(--mono); font-size: var(--fs-mono-sm);
+    letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted);
+  }
+  #complete-screen h2 { font-size: 32px; font-weight: 500; letter-spacing: -0.01em; }
+  #complete-screen p { font-size: var(--fs-body); color: var(--muted); max-width: 440px; line-height: 1.65; }
+
+  #mm-ruler {
+    position: fixed; top: -9999px; left: -9999px;
+    width: 10mm; height: 10mm;
+    visibility: hidden; pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════
+     LOADING
+══════════════════════════════════════════════════════════════ -->
+<div id="loading-screen">
+  <span>Loading…</span>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     RETURNING PARTICIPANT — INCOMPLETE SESSION
+══════════════════════════════════════════════════════════════ -->
+<div id="restart-screen" class="interstitial hidden">
+  <div class="interstitial-inner">
+    <span class="tag">Returning participant</span>
+    <h2>You have an unfinished session.</h2>
+    <p>
+      It looks like you started this study previously but did not complete it.
+      Your previous data will be removed and you will begin again from the start.
+      If you did not intend to return, you may close this page.
+    </p>
+    <div class="interstitial-btns">
+      <button class="btn" id="btn-restart-cancel">Close</button>
+      <button class="btn primary" id="btn-restart-confirm">Start fresh →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     RETURNING PARTICIPANT — ALREADY COMPLETED
+══════════════════════════════════════════════════════════════ -->
+<div id="completed-warn-screen" class="interstitial hidden">
+  <div class="interstitial-inner">
+    <span class="tag">Already completed</span>
+    <h2>It looks like you've done this before.</h2>
+    <p>
+      Our records show you have already completed this study. You are welcome
+      to participate again — your earlier data will be kept separately. If you
+      did not intend to return, you may close this page.
+    </p>
+    <div class="interstitial-btns">
+      <button class="btn" id="btn-warn-cancel">Close</button>
+      <button class="btn primary" id="btn-warn-continue">Continue anyway →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     INTAKE FORM
+══════════════════════════════════════════════════════════════ -->
+<div id="intake-overlay" class="hidden">
+  <div class="intake-inner">
+
+    <div class="intake-logo">Handwriting Research Study</div>
+    <h1>Participant Information &amp; Consent</h1>
+    <p class="subtitle">Please complete all fields before proceeding to the writing tasks. Your responses will be recorded alongside your handwriting data.</p>
+
+    <div class="instructions">
+      <h2>How this study works</h2>
+      <ol id="instructions-list">
+        <!-- populated dynamically once tasks.json is loaded -->
+        <li>Complete this form in full. Fields marked <strong>*</strong> are required.</li>
+        <li>You will be guided through a series of tasks. Shape tracing tasks come first, followed by writing tasks.</li>
+        <li>Some tasks are repeated multiple times — a repetition counter will show your progress within each task.</li>
+        <li>Each repetition has its own canvas. Write or trace naturally, at your normal pace.</li>
+        <li>At the end of each repetition tap <strong>Save &amp; Continue</strong>. Your data will be sent securely to the server.</li>
+        <li>We <strong>strongly prefer</strong> Apple Pencil or stylus input, as these provide pressure and tilt data. Finger, mouse, and trackpad input are also accepted.</li>
+        <li>Thank you sincerely for your participation. Your contribution directly supports research into handwriting dynamics and neurological condition detection.</li>
+      </ol>
+    </div>
+
+    <div class="section-label">Demographics</div>
+
+    <div class="field">
+      <label class="field-label">Age <span class="req">*</span></label>
+      <input type="number" id="f-age" min="5" max="110" placeholder="e.g. 42">
+    </div>
+
+    <div class="field">
+      <label class="field-label">Gender <span class="req">*</span></label>
+      <div class="radio-group">
+        <label class="radio-option"><input type="radio" name="gender" value="male"><span>Male</span></label>
+        <label class="radio-option"><input type="radio" name="gender" value="female"><span>Female</span></label>
+        <label class="radio-option"><input type="radio" name="gender" value="non-binary"><span>Non-binary / gender diverse</span></label>
+        <label class="radio-option"><input type="radio" name="gender" value="prefer-not-to-say"><span>Prefer not to say</span></label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Dominant hand <span class="req">*</span></label>
+      <div class="radio-group inline">
+        <label class="radio-option inline"><input type="radio" name="handedness" value="right"><span>Right</span></label>
+        <label class="radio-option inline"><input type="radio" name="handedness" value="left"><span>Left</span></label>
+        <label class="radio-option inline"><input type="radio" name="handedness" value="ambidextrous"><span>Ambidextrous</span></label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Hand used for this task <span class="req">*</span></label>
+      <div class="radio-group inline">
+        <label class="radio-option inline"><input type="radio" name="writing-hand" value="right"><span>Right</span></label>
+        <label class="radio-option inline"><input type="radio" name="writing-hand" value="left"><span>Left</span></label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Input device <span class="req">*</span></label>
+      <p class="hint" style="margin-bottom:10px">We strongly prefer Apple Pencil or stylus — these provide richer data (pressure, tilt). Other options are accepted.</p>
+      <select id="f-input-device">
+        <option value="">— Select input device —</option>
+        <option value="apple-pencil">Apple Pencil (preferred)</option>
+        <option value="stylus-other">Other stylus / digital pen (preferred)</option>
+        <option value="finger">Finger (touchscreen)</option>
+        <option value="mouse">Mouse</option>
+        <option value="trackpad">Trackpad</option>
+      </select>
+    </div>
+
+    <div class="section-label">Medical &amp; Clinical</div>
+
+    <div class="field">
+      <label class="field-label">Have you been diagnosed with Parkinson's disease? <span class="req">*</span></label>
+      <div class="radio-group inline">
+        <label class="radio-option inline"><input type="radio" name="parkinsons" value="yes"><span>Yes</span></label>
+        <label class="radio-option inline"><input type="radio" name="parkinsons" value="no"><span>No</span></label>
+        <label class="radio-option inline"><input type="radio" name="parkinsons" value="unsure"><span>Unsure</span></label>
+      </div>
+    </div>
+
+    <div class="field hidden" id="field-pd-stage">
+      <label class="field-label">Parkinson's stage (Hoehn &amp; Yahr scale)</label>
+      <select id="f-pd-stage">
+        <option value="">— Select —</option>
+        <option value="1">Stage 1 — Unilateral symptoms only</option>
+        <option value="2">Stage 2 — Bilateral, no balance impairment</option>
+        <option value="3">Stage 3 — Bilateral, mild balance impairment</option>
+        <option value="4">Stage 4 — Severe disability, can still walk/stand</option>
+        <option value="5">Stage 5 — Wheelchair-bound or bedridden</option>
+        <option value="unknown">Unknown / not staged</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Any other neurological conditions? <span class="req">*</span></label>
+      <div class="radio-group">
+        <label class="radio-option"><input type="radio" name="other-neuro" value="none"><span>None</span></label>
+        <label class="radio-option"><input type="radio" name="other-neuro" value="essential-tremor"><span>Essential tremor</span></label>
+        <label class="radio-option"><input type="radio" name="other-neuro" value="ms"><span>Multiple sclerosis (MS)</span></label>
+        <label class="radio-option"><input type="radio" name="other-neuro" value="stroke"><span>Stroke / cerebrovascular event</span></label>
+        <label class="radio-option"><input type="radio" name="other-neuro" value="other"><span>Other neurological condition</span></label>
+        <label class="radio-option"><input type="radio" name="other-neuro" value="prefer-not-to-say"><span>Prefer not to say</span></label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Currently taking medication affecting motor control or hand tremor?</label>
+      <div class="radio-group inline">
+        <label class="radio-option inline"><input type="radio" name="medication" value="yes"><span>Yes</span></label>
+        <label class="radio-option inline"><input type="radio" name="medication" value="no"><span>No</span></label>
+        <label class="radio-option inline"><input type="radio" name="medication" value="prefer-not-to-say"><span>Prefer not to say</span></label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">How would you rate your hand steadiness today?</label>
+      <div class="radio-group">
+        <label class="radio-option"><input type="radio" name="steadiness" value="very-steady"><span>Very steady — no noticeable tremor</span></label>
+        <label class="radio-option"><input type="radio" name="steadiness" value="mostly-steady"><span>Mostly steady — minor occasional tremor</span></label>
+        <label class="radio-option"><input type="radio" name="steadiness" value="moderate-tremor"><span>Moderate tremor — noticeable but manageable</span></label>
+        <label class="radio-option"><input type="radio" name="steadiness" value="significant-tremor"><span>Significant tremor — affects daily writing</span></label>
+      </div>
+    </div>
+
+    <div class="section-label">Writing Background</div>
+
+    <div class="field">
+      <label class="field-label">Estimated hours per day spent writing by hand (on average)</label>
+      <input type="number" id="f-writing-hours" min="0" max="24" step="0.5" placeholder="e.g. 1.5">
+      <p class="hint">Include all handwriting — notes, signatures, journalling, etc. Enter 0 if you rarely write by hand.</p>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Writing style most natural to you</label>
+      <div class="radio-group inline">
+        <label class="radio-option inline"><input type="radio" name="writing-style" value="print"><span>Print</span></label>
+        <label class="radio-option inline"><input type="radio" name="writing-style" value="cursive"><span>Cursive</span></label>
+        <label class="radio-option inline"><input type="radio" name="writing-style" value="mixed"><span>Mixed</span></label>
+      </div>
+    </div>
+
+    <div class="section-label">Informed Consent &amp; Data Use</div>
+
+    <div class="consent-box">
+      <h2>Participant Consent Statement</h2>
+      <p>By participating in this study, you acknowledge and agree to the following:</p>
+      <p><strong>1. Nature of data collected.</strong> This study collects digitised handwriting data, including the spatial coordinates, timing, pressure, and tilt of each pen stroke, together with the demographic and clinical information provided on this form. No audio, video, or personally identifying information (such as name, address, or contact details) is collected.</p>
+      <p><strong>2. Purpose of research.</strong> The data will be used to investigate characteristics of handwriting motion, including the effects of neurological conditions such as Parkinson's disease on pen-stroke dynamics. Results may be used to develop or evaluate computational models of handwriting analysis.</p>
+      <p><strong>3. Publication and sharing.</strong> Anonymised data, including stroke data and de-identified demographic responses, may be included in academic publications, conference presentations, or publicly released research datasets. No individual participant will be identifiable in any published output.</p>
+      <p><strong>4. Voluntary participation.</strong> Your participation is entirely voluntary. You may withdraw at any time before submitting your data by closing this page. Once submitted, it may not be possible to identify and remove your individual contribution.</p>
+      <p><strong>5. Data storage.</strong> Data will be stored securely and accessed only by the research team. It will not be sold or shared with third parties for commercial purposes.</p>
+      <div class="consent-checks">
+        <label class="consent-check">
+          <input type="checkbox" id="consent-research">
+          <span>I have read and understood the above consent statement. I freely consent to my anonymised handwriting and demographic data being collected, analysed, and potentially published or shared as part of this research.</span>
+        </label>
+        <label class="consent-check">
+          <input type="checkbox" id="consent-attest">
+          <span>I attest that all information I have provided on this form is true and correct to the best of my knowledge.</span>
+        </label>
+      </div>
+    </div>
+
+    <div id="form-error">Please complete all required fields and tick both consent boxes before continuing.</div>
+    <button id="btn-begin">Begin Tasks →</button>
+    <p class="intake-footer">Your data is transmitted over a local network only. This tool does not connect to the internet.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     TASK SCREEN
+══════════════════════════════════════════════════════════════ -->
+<div id="task-screen" class="hidden">
+
+  <div id="progress-bar">
+    <!-- .progress-step elements injected by JS -->
+  </div>
+
+  <div id="task-header">
+    <div id="task-header-left">
+      <div id="task-title"></div>
+      <div id="task-instruction"></div>
+    </div>
+    <div id="rep-indicator"></div>
+  </div>
+
+  <div id="prompt-banner" class="hidden"></div>
+
+  <div id="task-canvas-wrap">
+    <!--
+      Two canvases live directly in the host page — no iframe.
+      The guide canvas draws the reference shape; the draw canvas captures input.
+      When a new task loads, the old drawing engine script is discarded and a
+      fresh one is fetched from /tasks/<canvas_html> and its <script> block is
+      extracted and eval'd in the host page scope. This gives the drawing code
+      direct access to the canvases and makes getStrokes() / clearCanvas() plain
+      in-page function calls with no cross-window boundary.
+    -->
+    <canvas id="baseline-canvas"></canvas>
+    <canvas id="task-canvas"></canvas>
+  </div>
+
+  <div id="task-footer">
+    <div id="task-stats">strokes: <span id="t-strokes">0</span> &nbsp; points: <span id="t-points">0</span></div>
+    <div id="task-live">● idle</div>
+    <button class="btn danger" id="btn-task-clear">Clear</button>
+    <button class="btn primary" id="btn-task-save">Save &amp; Continue →</button>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SAVE MODAL
+══════════════════════════════════════════════════════════════ -->
+<div id="save-modal-overlay">
+  <div id="save-modal">
+    <h2 id="save-modal-title">Save task data</h2>
+    <p id="save-modal-desc"></p>
+    <p id="save-status"></p>
+    <div id="save-modal-btns">
+      <button class="btn" id="btn-save-cancel">Cancel</button>
+      <button class="btn primary" id="btn-save-confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     COMPLETION
+══════════════════════════════════════════════════════════════ -->
+<div id="complete-screen" class="hidden">
+  <div class="tag">Study complete</div>
+  <h2>Thank you.</h2>
+  <p>All tasks have been saved successfully. Your contribution to this research is genuinely appreciated. You may now close this page.</p>
+</div>
+
+<div id="mm-ruler"></div>
+
+<script>
+'use strict';
+
+// ══════════════════════════════════════════════════════════════
+// APPLICATION STATE
+// ══════════════════════════════════════════════════════════════
+
+let TASKS        = [];        // loaded from /tasks at startup
+let deviceToken  = null;      // 32-char hex, echoed from cookie
+let sessionId    = null;      // UUID assigned after intake form
+let deviceStatus = 'fresh';   // fresh | restart | warn_completed
+
+// Task navigation
+//   taskGroupIndex : which entry in TASKS[] we are on
+//   repIndex       : 0-based repetition within that task group
+let taskGroupIndex = 0;
+let repIndex       = 0;
+
+let isSaving   = false;
+let fingerMode = false;
+
+// ══════════════════════════════════════════════════════════════
+// STARTUP — load tasks, then check session
+// ══════════════════════════════════════════════════════════════
+
+async function init() {
+  try {
+    // 1. Fetch task definitions
+    const res = await fetch('/tasks');
+    if (!res.ok) throw new Error('Could not load tasks.json');
+    const data = await res.json();
+    TASKS = data.tasks.sort((a, b) => a.order - b.order);
+
+    // 2. Check session / cookie status
+    const sc = await fetch('/session/check');
+    if (!sc.ok) throw new Error('Could not reach server');
+    const sessionData = await sc.json();
+    deviceStatus = sessionData.status;
+
+    // Extract token from cookie (server set it)
+    deviceToken = getCookie('device_token');
+
+    // 3. Route based on status
+    document.getElementById('loading-screen').classList.add('hidden');
+
+    if (deviceStatus === 'fresh') {
+      showIntakeForm();
+    } else if (deviceStatus === 'restart') {
+      // Store old session_id so we can abandon it on confirm
+      document.getElementById('restart-screen')._oldSessionId = sessionData.session_id;
+      document.getElementById('restart-screen').classList.remove('hidden');
+    } else if (deviceStatus === 'warn_completed') {
+      document.getElementById('completed-warn-screen').classList.remove('hidden');
+    }
+  } catch (err) {
+    document.getElementById('loading-screen').querySelector('span').textContent =
+      'Error: ' + err.message;
+  }
+}
+
+function getCookie(name) {
+  const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+  return m ? m[1] : null;
+}
+
+// ══════════════════════════════════════════════════════════════
+// INTERSTITIAL BUTTONS
+// ══════════════════════════════════════════════════════════════
+
+document.getElementById('btn-restart-cancel').addEventListener('click', () => {
+  window.close(); // or just leave — participant chose to close
+});
+
+document.getElementById('btn-restart-confirm').addEventListener('click', async () => {
+  const screen = document.getElementById('restart-screen');
+  const oldId  = screen._oldSessionId;
+  if (oldId) {
+    await fetch('/session/abandon', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: oldId })
+    });
+  }
+  screen.classList.add('hidden');
+  showIntakeForm();
+});
+
+document.getElementById('btn-warn-cancel').addEventListener('click', () => {
+  window.close();
+});
+
+document.getElementById('btn-warn-continue').addEventListener('click', () => {
+  document.getElementById('completed-warn-screen').classList.add('hidden');
+  showIntakeForm();
+});
+
+// ══════════════════════════════════════════════════════════════
+// INTAKE FORM
+// ══════════════════════════════════════════════════════════════
+
+function showIntakeForm() {
+  document.getElementById('intake-overlay').classList.remove('hidden');
+}
+
+document.querySelectorAll('input[name="parkinsons"]').forEach(r => {
+  r.addEventListener('change', () => {
+    document.getElementById('field-pd-stage').classList.toggle('hidden', r.value !== 'yes');
+  });
+});
+
+document.getElementById('btn-begin').addEventListener('click', async () => {
+  const age      = document.getElementById('f-age').value.trim();
+  const gender   = document.querySelector('input[name="gender"]:checked')?.value;
+  const handed   = document.querySelector('input[name="handedness"]:checked')?.value;
+  const wHand    = document.querySelector('input[name="writing-hand"]:checked')?.value;
+  const inputDev = document.getElementById('f-input-device').value;
+  const pd       = document.querySelector('input[name="parkinsons"]:checked')?.value;
+  const oNeuro   = document.querySelector('input[name="other-neuro"]:checked')?.value;
+  const cRes     = document.getElementById('consent-research').checked;
+  const cAtt     = document.getElementById('consent-attest').checked;
+
+  const err = document.getElementById('form-error');
+  if (!age || !gender || !handed || !wHand || !inputDev || !pd || !oNeuro || !cRes || !cAtt) {
+    err.classList.add('visible');
+    err.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  err.classList.remove('visible');
+
+  fingerMode = (inputDev === 'finger');
+
+  // Create session on server
+  const payload = {
+    token:               deviceToken,
+    status:              deviceStatus,
+    age:                 parseInt(age),
+    gender,
+    handedness:          handed,
+    writing_hand:        wHand,
+    input_device:        inputDev,
+    parkinsons_diagnosis: pd === 'yes' ? true : pd === 'no' ? false : null,
+    parkinsons_stage:    document.getElementById('f-pd-stage').value || 'n/a',
+    other_conditions:    oNeuro,
+    motor_medication:    document.querySelector('input[name="medication"]:checked')?.value || null,
+    hand_steadiness:     document.querySelector('input[name="steadiness"]:checked')?.value || null,
+    writing_hours_per_day: parseFloat(document.getElementById('f-writing-hours').value) || null,
+    writing_style:       document.querySelector('input[name="writing-style"]:checked')?.value || null,
+    consent:             true,
+  };
+
+  try {
+    const res = await fetch('/session/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Server error creating session');
+    const data = await res.json();
+    sessionId = data.session_id;
+  } catch (err) {
+    document.getElementById('form-error').textContent = 'Could not connect to server. Please try again.';
+    document.getElementById('form-error').classList.add('visible');
+    return;
+  }
+
+  document.getElementById('intake-overlay').classList.add('hidden');
+  document.getElementById('task-screen').classList.remove('hidden');
+  buildProgressBar();
+  loadTaskGroup(0);
+});
+
+// ══════════════════════════════════════════════════════════════
+// PROGRESS BAR
+// ══════════════════════════════════════════════════════════════
+
+function buildProgressBar() {
+  const bar = document.getElementById('progress-bar');
+  bar.innerHTML = '';
+  TASKS.forEach((task, i) => {
+    const el = document.createElement('div');
+    el.className = 'progress-step';
+    el.dataset.step = i;
+    // Show reps count in pill if > 1
+    const repSuffix = task.repetitions > 1 ? `\n×${task.repetitions}` : '';
+    el.textContent = task.label + repSuffix;
+    bar.appendChild(el);
+  });
+}
+
+function updateProgressBar(activeIndex) {
+  document.querySelectorAll('.progress-step').forEach((el, i) => {
+    el.classList.remove('active', 'done');
+    if (i < activeIndex) el.classList.add('done');
+    if (i === activeIndex) el.classList.add('active');
+  });
+  // Scroll active pill into view
+  const active = document.querySelector('.progress-step.active');
+  if (active) active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+}
+
+// ══════════════════════════════════════════════════════════════
+// LOAD TASK GROUP  (a new task_name / orientation combo)
+// ══════════════════════════════════════════════════════════════
+
+function loadTaskGroup(groupIndex) {
+  taskGroupIndex = groupIndex;
+  repIndex = 0;
+  updateProgressBar(groupIndex);
+  loadRep();
+}
+
+// ══════════════════════════════════════════════════════════════
+// LOAD REPETITION  (one rep within the current task group)
+// ══════════════════════════════════════════════════════════════
+
+function loadRep() {
+  const task = TASKS[taskGroupIndex];
+
+  // Header
+  const totalGroups = TASKS.length;
+  document.getElementById('task-title').textContent =
+    `Task ${taskGroupIndex + 1} of ${totalGroups} — ${task.label}`;
+  document.getElementById('task-instruction').textContent = task.instruction;
+
+  // Repetition indicator
+  const repEl = document.getElementById('rep-indicator');
+  if (task.repetitions > 1) {
+    repEl.textContent = `Rep ${repIndex + 1} of ${task.repetitions}`;
+    repEl.classList.add('multi');
+  } else {
+    repEl.textContent = '';
+    repEl.classList.remove('multi');
+  }
+
+  // Prompt banner
+  const pb = document.getElementById('prompt-banner');
+  if (task.prompt) {
+    pb.textContent = task.prompt;
+    pb.classList.remove('hidden');
+  } else {
+    pb.classList.add('hidden');
+  }
+
+  // Reset stats display
+  clearCanvas();
+  setLive(false);
+
+  // Load drawing engine for this task
+  loadTaskScript(task);
+}
+
+// ── Visual sizing: mm → CSS pixels ───────────────────────────
+// Used by trace scripts to size guide shapes on screen.
+// Reads the hidden #mm-ruler DOM element — this is the browser's
+// own rendering of a 10mm element and may differ from the physical
+// screen due to OS scaling, browser zoom, or device quirks.
+//
+// RENDER_SCALE_CORRECTION: ratio of intended size to observed size.
+// Measured: a 160mm command renders as 110mm on screen → 160/110 ≈ 1.4545.
+// Adjust this value if the rendered guide size changes (different device,
+// browser zoom level, OS display scaling, etc).
+// Do NOT change this for data export purposes — see PX_PER_MM_EXPORT below.
+const RENDER_SCALE_CORRECTION = 160 / 117;   // ≈ 1.4545
+
+function mmToPx(mm) {
+  const ruler = document.getElementById('mm-ruler');
+  return (ruler.getBoundingClientRect().width / 10) * mm * RENDER_SCALE_CORRECTION;
+}
+
+// ══════════════════════════════════════════════════════════════
+// COORDINATE TRANSFORM — data export
+// ══════════════════════════════════════════════════════════════
+
+// PX_PER_MM_EXPORT: calibrated pixels-per-mm used ONLY when converting
+// collected pixel coordinates to millimetres for database storage.
+// This is independent of mmToPx() above — adjust here if exported
+// distances don't match physical measurements on your device.
+// Measured value for this setup: 5.197 px/mm.
+const PX_PER_MM_EXPORT = 5.197;
+
+function pxPerMm() {
+  return PX_PER_MM_EXPORT;
+}
+
+// ══════════════════════════════════════════════════════════════
+// CANVAS SETUP
+// ══════════════════════════════════════════════════════════════
+
+const taskCanvas     = document.getElementById('task-canvas');
+const baselineCanvas = document.getElementById('baseline-canvas');
+const ctx  = taskCanvas.getContext('2d');
+const bctx = baselineCanvas.getContext('2d');
+
+// gctx alias so trace scripts that reference gctx work unchanged
+// (trace scripts only call drawGuide which uses gctx internally —
+//  but we expose it as a global so their drawGuide() body can use it)
+window.gctx = bctx;
+window.ctx  = ctx;
+
+function cssW() { return taskCanvas.width  / devicePixelRatio; }
+function cssH() { return taskCanvas.height / devicePixelRatio; }
+
+function resizeCanvases() {
+  const wrap = document.getElementById('task-canvas-wrap');
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  taskCanvas.width      = w * devicePixelRatio;
+  taskCanvas.height     = h * devicePixelRatio;
+  baselineCanvas.width  = w * devicePixelRatio;
+  baselineCanvas.height = h * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  bctx.scale(devicePixelRatio, devicePixelRatio);
+}
+
+window.addEventListener('resize', () => {
+  if (document.getElementById('task-screen').classList.contains('hidden')) return;
+  resizeCanvases();
+  if (typeof window.drawGuide === 'function') {
+    originPx = window.drawGuide() || { x: 0, y: 0 };
+  }
+  redrawStrokes();
+});
+
+// ══════════════════════════════════════════════════════════════
+// DRAWING ENGINE
+// ══════════════════════════════════════════════════════════════
+
+// originPx: CSS-pixel position of the start dot, set by drawGuide().
+// All saved coordinates are relative to this point with Y flipped.
+let originPx = { x: 0, y: 0 };
+
+let strokes     = [];   // array of arrays of point objects (raw CSS px, canvas-Y)
+let curStroke   = null;
+let totalPoints = 0;
+
+function r2(n) { return Math.round(n * 100) / 100; }
+
+// Transform a raw canvas point to saved coordinates:
+//   - subtract origin
+//   - flip Y (canvas Y increases downward; we want Y+ up)
+//   - convert px → mm
+function transformPt(x, y) {
+  const scale = pxPerMm();
+  return {
+    x: r2((x - originPx.x) / scale),
+    y: r2((originPx.y - y) / scale),   // Y flip
+  };
+}
+
+function getStrokes() {
+  const pts = [];
+  for (let si = 0; si < strokes.length; si++)
+    for (let pi = 0; pi < strokes[si].length; pi++) {
+      const p   = strokes[si][pi];
+      const t   = transformPt(p.x, p.y);
+      pts.push({
+        stroke_index: si,
+        point_index:  pi,
+        x:            t.x,
+        y:            t.y,
+        time_ms:      r2(p.t),
+        pressure:     p.pressure != null ? r2(p.pressure) : null,
+        tilt_x_deg:   p.tiltX    != null ? r2(p.tiltX)    : null,
+        tilt_y_deg:   p.tiltY    != null ? r2(p.tiltY)    : null,
+        pointer_type: p.pointerType,
+      });
+    }
+  return pts;
+}
+
+function clearCanvas() {
+  strokes = []; curStroke = null; totalPoints = 0;
+  ctx.clearRect(0, 0, cssW(), cssH());
+  updateStats();
+}
+
+function redrawStrokes() {
+  ctx.clearRect(0, 0, cssW(), cssH());
+  styleCtx();
+  for (const stroke of strokes) {
+    if (!stroke.length) continue;
+    ctx.beginPath(); ctx.moveTo(stroke[0].x, stroke[0].y);
+    for (let i = 1; i < stroke.length; i++) ctx.lineTo(stroke[i].x, stroke[i].y);
+    ctx.stroke();
+  }
+}
+
+function styleCtx() {
+  ctx.strokeStyle = '#000'; ctx.lineWidth = 1.8;
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+}
+
+function makePt(x, y, t, pressure, tiltX, tiltY, pointerType) {
+  return { x, y, t, pressure, tiltX: tiltX||0, tiltY: tiltY||0, pointerType };
+}
+
+function startStroke(pt) {
+  curStroke = [pt]; strokes.push(curStroke); totalPoints++;
+  styleCtx(); ctx.beginPath(); ctx.moveTo(pt.x, pt.y);
+  setLive(true); updateStats();
+}
+
+function endStroke() {
+  curStroke = null;
+  setLive(false); updateStats();
+}
+
+function addPt(pt) {
+  if (!curStroke) { startStroke(pt); return; }
+  const prev = curStroke[curStroke.length - 1];
+  if (prev && pt.x === prev.x && pt.y === prev.y) return;
+  curStroke.push(pt); totalPoints++;
+  ctx.lineTo(pt.x, pt.y);
+}
+
+function flushStroke() {
+  ctx.stroke();
+  if (curStroke?.length > 0) {
+    const last = curStroke[curStroke.length - 1];
+    ctx.beginPath(); ctx.moveTo(last.x, last.y);
+  }
+  updateStats();
+}
+
+function updateStats() {
+  document.getElementById('t-strokes').textContent = strokes.length;
+  document.getElementById('t-points').textContent  = totalPoints;
+}
+
+function setLive(active) {
+  const el = document.getElementById('task-live');
+  if (active) { el.textContent = '● drawing'; el.classList.add('active'); }
+  else        { el.textContent = '● idle';    el.classList.remove('active'); }
+}
+
+// ── Pointer Events sidecar (pressure/tilt for Apple Pencil) ──
+const SIDECAR_MAX = 60;
+const sidecarBuf  = [];
+
+function sidecarPush(e) {
+  if (e.pointerType !== 'pen') return;
+  sidecarBuf.push({ t: e.timeStamp, pressure: e.pressure, tiltX: e.tiltX, tiltY: e.tiltY });
+  if (sidecarBuf.length > SIDECAR_MAX) sidecarBuf.shift();
+}
+
+function sidecarLookup(t) {
+  if (!sidecarBuf.length) return { pressure: null, tiltX: null, tiltY: null };
+  let best = sidecarBuf[0], bestDiff = Math.abs(t - best.t);
+  for (let i = 1; i < sidecarBuf.length; i++) {
+    const d = Math.abs(t - sidecarBuf[i].t);
+    if (d < bestDiff) { bestDiff = d; best = sidecarBuf[i]; }
+  }
+  return best;
+}
+
+function isPalmTouch(touch) {
+  if (fingerMode) return false;
+  if (typeof touch.touchType === 'string') return touch.touchType === 'direct';
+  return false;
+}
+
+function touchPt(touch, e, inputType) {
+  const rect = taskCanvas.getBoundingClientRect(), t = e.timeStamp;
+  const sc = inputType === 'pen' ? sidecarLookup(t) : { pressure: null, tiltX: null, tiltY: null };
+  return makePt(
+    touch.clientX - rect.left, touch.clientY - rect.top, t,
+    sc.pressure ?? touch.force ?? 0, sc.tiltX ?? 0, sc.tiltY ?? 0, inputType
+  );
+}
+
+// ── Touch Events (primary path for Apple Pencil on Safari) ───
+taskCanvas.addEventListener('pointermove', e => {
+  if (e.pointerType === 'pen') {
+    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+    for (const ev of evs) sidecarPush(ev);
+  }
+});
+
+taskCanvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  for (const touch of e.changedTouches) {
+    if (isPalmTouch(touch)) continue;
+    curStroke = null;
+    startStroke(touchPt(touch, e, fingerMode ? 'touch' : 'pen'));
+  }
+}, { passive: false });
+
+taskCanvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const touch of e.changedTouches) {
+    if (isPalmTouch(touch)) continue;
+    addPt(touchPt(touch, e, fingerMode ? 'touch' : 'pen'));
+  }
+  flushStroke();
+}, { passive: false });
+
+taskCanvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  const allPalm = Array.from(e.changedTouches).every(isPalmTouch);
+  if (!allPalm) endStroke();
+}, { passive: false });
+
+taskCanvas.addEventListener('touchcancel', e => {
+  e.preventDefault(); endStroke();
+}, { passive: false });
+
+// ── Pointer Events (mouse fallback) ──────────────────────────
+let mouseDown = false;
+
+taskCanvas.addEventListener('pointerdown', e => {
+  if (e.pointerType !== 'mouse') return;
+  e.preventDefault(); mouseDown = true; curStroke = null;
+  const rect = taskCanvas.getBoundingClientRect();
+  startStroke(makePt(e.clientX-rect.left, e.clientY-rect.top,
+    e.timeStamp, e.pressure, e.tiltX, e.tiltY, 'mouse'));
+});
+
+taskCanvas.addEventListener('pointermove', e => {
+  if (e.pointerType !== 'mouse' || !mouseDown) return;
+  e.preventDefault();
+  const rect = taskCanvas.getBoundingClientRect();
+  addPt(makePt(e.clientX-rect.left, e.clientY-rect.top,
+    e.timeStamp, e.pressure, e.tiltX, e.tiltY, 'mouse'));
+  flushStroke();
+});
+
+taskCanvas.addEventListener('pointerup',     e => { if (e.pointerType === 'mouse') { mouseDown = false; endStroke(); } });
+taskCanvas.addEventListener('pointercancel', e => { if (e.pointerType === 'mouse') { mouseDown = false; endStroke(); } });
+
+// ══════════════════════════════════════════════════════════════
+// TASK SCRIPT LOADER
+// Fetches a trace HTML file, extracts its <script> block, and
+// evals it in this page's scope. The script must define drawGuide()
+// and nothing else — all input/storage is handled above.
+// drawGuide() must return { x, y } (CSS pixels) of the start dot.
+// ══════════════════════════════════════════════════════════════
+
+async function loadTaskScript(task) {
+  const res  = await fetch(`/tasks/${task.canvas_html}`);
+  const html = await res.text();
+  const match = html.match(/<script[^>]*>([\s\S]*?)<\/script>/i);
+  if (!match) return;
+
+  document.getElementById('_task-script')?.remove();
+
+  resizeCanvases();
+  clearCanvas();
+  bctx.clearRect(0, 0, cssW(), cssH());
+
+  const el = document.createElement('script');
+  el.id = '_task-script';
+  el.textContent = match[1];
+  document.head.appendChild(el);
+
+  // drawGuide() is now defined in page scope — call it and record origin
+  if (typeof window.drawGuide === 'function') {
+    originPx = window.drawGuide() || { x: 0, y: 0 };
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// CLEAR BUTTON
+// ══════════════════════════════════════════════════════════════
+
+document.getElementById('btn-task-clear').addEventListener('click', () => {
+  clearCanvas();
+});
+
+// ══════════════════════════════════════════════════════════════
+// SAVE BUTTON → MODAL
+// ══════════════════════════════════════════════════════════════
+
+document.getElementById('btn-task-save').addEventListener('click', () => {
+  if (isSaving) return;
+  const task = TASKS[taskGroupIndex];
+  const isLastRep   = repIndex === task.repetitions - 1;
+  const isLastGroup = taskGroupIndex === TASKS.length - 1;
+
+  let title, desc;
+  if (task.repetitions > 1) {
+    title = `Rep ${repIndex + 1} of ${task.repetitions} — ${task.label}`;
+    desc  = isLastRep
+      ? `This is the final repetition for this task. Confirming will save your data and move to the next task.`
+      : `Confirming will save this repetition and move to the next one (${repIndex + 2} of ${task.repetitions}).`;
+  } else {
+    title = `Task ${taskGroupIndex + 1} of ${TASKS.length} — ${task.label}`;
+    desc  = isLastGroup
+      ? 'This is the final task. Confirming will save your data and complete the study.'
+      : 'Confirming will save your data and move to the next task.';
+  }
+
+  document.getElementById('save-modal-title').textContent = title;
+  document.getElementById('save-modal-desc').textContent  = desc;
+  document.getElementById('save-status').textContent = '';
+  document.getElementById('save-modal-overlay').classList.add('visible');
+});
+
+document.getElementById('btn-save-cancel').addEventListener('click', () => {
+  if (isSaving) return;
+  document.getElementById('save-modal-overlay').classList.remove('visible');
+});
+
+document.getElementById('btn-save-confirm').addEventListener('click', async () => {
+  if (isSaving) return;
+  isSaving = true;
+
+  const status  = document.getElementById('save-status');
+  const btnConf = document.getElementById('btn-save-confirm');
+  const btnCanc = document.getElementById('btn-save-cancel');
+  btnConf.textContent = 'Saving…';
+  btnConf.disabled = btnCanc.disabled = true;
+  status.textContent = '';
+
+  const task   = TASKS[taskGroupIndex];
+  const points = getStrokes();
+
+  const payload = {
+    session_id:  sessionId,
+    task_name:   task.task_name,
+    task_type:   task.task_type,
+    orientation: task.orientation,
+    task_index:  repIndex,
+    points,
+  };
+
+  try {
+    const res = await fetch('/strokes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      status.textContent = '✓ Saved';
+      setTimeout(async () => {
+        document.getElementById('save-modal-overlay').classList.remove('visible');
+        resetModal();
+        await advanceTask();
+      }, 900);
+    } else {
+      const body = await res.text();
+      status.textContent = 'Could not save — ' + (body || 'please try again');
+      resetModal();
+    }
+  } catch {
+    status.textContent = 'Could not reach server — please try again';
+    resetModal();
+  }
+});
+
+function resetModal() {
+  const btnConf = document.getElementById('btn-save-confirm');
+  const btnCanc = document.getElementById('btn-save-cancel');
+  btnConf.textContent = 'Confirm';
+  btnConf.disabled = btnCanc.disabled = false;
+  isSaving = false;
+}
+
+// ══════════════════════════════════════════════════════════════
+// ADVANCE — move to next rep or next task group
+// ══════════════════════════════════════════════════════════════
+
+async function advanceTask() {
+  const task = TASKS[taskGroupIndex];
+
+  if (repIndex < task.repetitions - 1) {
+    repIndex++;
+    // Clear user ink only — guide stays, origin unchanged
+    clearCanvas();
+    const repEl = document.getElementById('rep-indicator');
+    repEl.textContent = `Rep ${repIndex + 1} of ${task.repetitions}`;
+    setLive(false);
+  } else if (taskGroupIndex < TASKS.length - 1) {
+    loadTaskGroup(taskGroupIndex + 1);
+  } else {
+    await markComplete();
+  }
+}
+
+async function markComplete() {
+  try {
+    await fetch('/session/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId })
+    });
+  } catch { /* best-effort */ }
+
+  document.getElementById('task-screen').classList.add('hidden');
+  document.getElementById('complete-screen').classList.remove('hidden');
+}
+
+// ══════════════════════════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════════════════════════
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>
+<script>
+// ── Wave — Horizontal ────────────────────────────────────────
+
+function drawGuide() {
+  const w = cssW(), h = cssH();
+  bctx.clearRect(0, 0, w, h);
+
+  const totalWidth = mmToPx(80);
+  const amplitude  = mmToPx(28);
+  const periods    = 4;
+  const steps      = 600;
+  const cx = w / 2, cy = h / 2;
+  const x0 = cx - totalWidth / 2;
+
+  function wavePt(i) {
+    const t = i / steps;
+    return [ x0 + t * totalWidth, cy - amplitude * Math.sin(t * periods * 2 * Math.PI) ];
+  }
+
+  bctx.lineCap = 'round'; bctx.lineJoin = 'round';
+
+  bctx.beginPath();
+  for (let i = 0; i <= steps; i++) { const [x,y]=wavePt(i); i===0?bctx.moveTo(x,y):bctx.lineTo(x,y); }
+  bctx.strokeStyle = '#e8e8e8'; bctx.lineWidth = 10; bctx.stroke();
+
+  bctx.beginPath();
+  for (let i = 0; i <= steps; i++) { const [x,y]=wavePt(i); i===0?bctx.moveTo(x,y):bctx.lineTo(x,y); }
+  bctx.strokeStyle = '#aaaaaa'; bctx.lineWidth = 2.25; bctx.stroke();
+
+  bctx.beginPath(); bctx.arc(x0, cy, 5, 0, Math.PI * 2);
+  bctx.fillStyle = '#888'; bctx.fill();
+
+  return { x: x0, y: cy };   // start dot = origin
+}
+</script></body></html>

@@ -38,78 +38,12 @@
 
   /* ── layout ── */
   .shell {
-    display: grid;
-    grid-template-columns: 260px 1fr;
-    min-height: 100vh;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 48px 80px;
   }
 
-  /* ── sidebar ── */
-  aside {
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    padding: 32px 0 48px;
-    position: sticky;
-    top: 0;
-    height: 100vh;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .logo {
-    padding: 0 24px 28px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 24px;
-  }
-  .logo-tag {
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--muted);
-    display: block;
-    margin-bottom: 5px;
-  }
-  .logo-title {
-    font-size: 15px;
-    font-weight: 500;
-    color: var(--accent);
-    letter-spacing: -0.01em;
-  }
-
-  .nav-section {
-    padding: 0 24px;
-    margin-bottom: 24px;
-  }
-  .nav-label {
-    font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 8px;
-    display: block;
-  }
-
-  .nav-link {
-    display: block;
-    padding: 7px 10px;
-    margin: 0 -10px;
-    border-radius: 5px;
-    font-size: 13px;
-    color: var(--accent-dim);
-    text-decoration: none;
-    cursor: pointer;
-    transition: background 0.12s, color 0.12s;
-  }
-  .nav-link:hover { background: var(--bg); color: var(--accent); }
-  .nav-link.active { background: var(--accent); color: #fff; }
-
-  .status-block {
-    margin-top: auto;
-    padding: 16px 24px 0;
-    border-top: 1px solid var(--border);
-  }
+  /* ── db status (top-of-page) ── */
   .db-status {
     font-family: var(--mono);
     font-size: 11px;
@@ -128,15 +62,19 @@
 
   /* ── main ── */
   main {
-    padding: 40px 48px 80px;
-    max-width: 900px;
+    width: 100%;
   }
 
   .page-header {
     margin-bottom: 36px;
     padding-bottom: 24px;
     border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
   }
+  .page-header-left { flex: 1; }
   .page-tag {
     font-family: var(--mono);
     font-size: 10px;
@@ -587,38 +525,18 @@
 <div id="toast"></div>
 
 <div class="shell">
+  <main>
 
-  <!-- ═══════════════════ SIDEBAR ═══════════════════ -->
-  <aside>
-    <div class="logo">
-      <span class="logo-tag">Research Tools</span>
-      <span class="logo-title">Dataset Export</span>
-    </div>
-
-    <div class="nav-section">
-      <span class="nav-label">Export</span>
-      <a class="nav-link active" onclick="scrollTo('#sec-columns')">Column selection</a>
-      <a class="nav-link" onclick="scrollTo('#sec-tasks')">Task filter</a>
-      <a class="nav-link" onclick="scrollTo('#sec-sessions')">Session filter</a>
-      <a class="nav-link" onclick="scrollTo('#sec-demographics')">Demographics</a>
-      <a class="nav-link" onclick="scrollTo('#sec-preview')">Preview &amp; export</a>
-    </div>
-
-    <div class="status-block">
+    <div class="page-header">
+      <div class="page-header-left">
+        <span class="page-tag">PD Writing Survey Data Collection</span>
+        <h1 class="page-title">Build your export</h1>
+        <p class="page-sub">Select columns, filter tasks and sessions, then download as CSV.</p>
+      </div>
       <div class="db-status" id="db-status">
         <span class="db-dot" id="db-dot"></span>
         <span id="db-label">Checking database…</span>
       </div>
-    </div>
-  </aside>
-
-  <!-- ═══════════════════ MAIN ═══════════════════ -->
-  <main>
-
-    <div class="page-header">
-      <span class="page-tag">Handwriting Research Study</span>
-      <h1 class="page-title">Build your export</h1>
-      <p class="page-sub">Select columns, filter tasks and sessions, then download as CSV.</p>
     </div>
 
     <!-- ═══ COLUMN SELECTION ═══ -->

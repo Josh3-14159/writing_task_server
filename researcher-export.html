@@ -1,0 +1,1621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dataset Export — Handwriting Research</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:           #f5f4f0;
+    --surface:      #ffffff;
+    --border:       #e2e0d8;
+    --border-mid:   #ccc9be;
+    --accent:       #1a1a1a;
+    --accent-dim:   #444;
+    --blue:         #0057ff;
+    --blue-light:   #e8f0ff;
+    --blue-border:  #b8ceff;
+    --muted:        #888880;
+    --danger:       #cc2200;
+    --success:      #1a7a40;
+    --success-bg:   #eef7f2;
+    --mono:         'IBM Plex Mono', monospace;
+    --sans:         'IBM Plex Sans', sans-serif;
+  }
+
+  html, body {
+    min-height: 100%;
+    background: var(--bg);
+    color: var(--accent);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ── layout ── */
+  .shell {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ── sidebar ── */
+  aside {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 32px 0 48px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .logo {
+    padding: 0 24px 28px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .logo-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 5px;
+  }
+  .logo-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: -0.01em;
+  }
+
+  .nav-section {
+    padding: 0 24px;
+    margin-bottom: 24px;
+  }
+  .nav-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .nav-link {
+    display: block;
+    padding: 7px 10px;
+    margin: 0 -10px;
+    border-radius: 5px;
+    font-size: 13px;
+    color: var(--accent-dim);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+  .nav-link:hover { background: var(--bg); color: var(--accent); }
+  .nav-link.active { background: var(--accent); color: #fff; }
+
+  .status-block {
+    margin-top: auto;
+    padding: 16px 24px 0;
+    border-top: 1px solid var(--border);
+  }
+  .db-status {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .db-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--success);
+    flex-shrink: 0;
+  }
+  .db-dot.warn { background: #e09000; }
+
+  /* ── main ── */
+  main {
+    padding: 40px 48px 80px;
+    max-width: 900px;
+  }
+
+  .page-header {
+    margin-bottom: 36px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .page-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+    display: block;
+  }
+  .page-title { font-size: 26px; font-weight: 500; letter-spacing: -0.02em; }
+  .page-sub { font-size: 14px; color: var(--muted); margin-top: 6px; }
+
+  /* ── section card ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    background: var(--surface);
+    transition: background 0.12s;
+  }
+  .card-header:hover { background: #fafaf8; }
+
+  .card-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .card-icon {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+  }
+  .card-subtitle { font-size: 12px; color: var(--muted); }
+
+  .card-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: var(--blue-light);
+    color: var(--blue);
+    border: 1px solid var(--blue-border);
+    white-space: nowrap;
+    transition: opacity 0.2s;
+  }
+  .card-badge.zero { background: var(--bg); color: var(--muted); border-color: var(--border); }
+
+  .card-chevron {
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: 8px;
+    transition: transform 0.2s;
+  }
+  .card-header.open .card-chevron { transform: rotate(180deg); }
+
+  .card-body {
+    padding: 20px;
+    display: none;
+  }
+  .card-body.open { display: block; }
+
+  /* ── column selector grid ── */
+  .col-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 8px;
+  }
+
+  .col-toggle {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.12s, background 0.12s;
+  }
+  .col-toggle:hover { border-color: var(--border-mid); background: #fafaf8; }
+  .col-toggle.selected {
+    border-color: var(--blue);
+    background: var(--blue-light);
+  }
+  .col-toggle input[type="checkbox"] {
+    margin-top: 2px;
+    accent-color: var(--blue);
+    width: 14px; height: 14px;
+    flex-shrink: 0;
+  }
+  .col-toggle-text .col-name {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent);
+    display: block;
+  }
+  .col-toggle-text .col-desc {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.4;
+    margin-top: 2px;
+  }
+
+  /* ── select-all row ── */
+  .select-all-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .select-all-row button {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: border-color 0.12s, color 0.12s;
+  }
+  .select-all-row button:hover { border-color: var(--border-mid); color: var(--accent); }
+
+  /* ── task checkboxes ── */
+  .task-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 8px;
+  }
+
+  .task-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.12s, background 0.12s;
+  }
+  .task-toggle:hover { border-color: var(--border-mid); }
+  .task-toggle.selected { border-color: var(--blue); background: var(--blue-light); }
+  .task-toggle input { accent-color: var(--blue); width: 14px; height: 14px; flex-shrink: 0; }
+  .task-name-block .t-name { font-size: 13px; font-weight: 500; display: block; }
+  .task-name-block .t-meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  .task-type-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .type-pill {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    color: var(--muted);
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+  }
+  .type-pill:hover { border-color: var(--border-mid); color: var(--accent); }
+  .type-pill.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* ── filter rows ── */
+  .filter-row {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    align-items: start;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .filter-row:last-child { border-bottom: none; padding-bottom: 0; }
+
+  .filter-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent-dim);
+    padding-top: 2px;
+  }
+  .filter-hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .filter-control { display: flex; flex-direction: column; gap: 8px; }
+
+  .inline-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .i-pill {
+    font-size: 12px;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    color: var(--muted);
+    background: transparent;
+    transition: border-color 0.12s, background 0.12s, color 0.12s;
+    white-space: nowrap;
+  }
+  .i-pill:hover { border-color: var(--border-mid); color: var(--accent); }
+  .i-pill.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .i-pill.any-pill.on { background: #eee; color: var(--accent); border-color: var(--border-mid); }
+
+  .range-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .range-group input[type="number"] {
+    width: 70px;
+    padding: 6px 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--bg);
+    color: var(--accent);
+    outline: none;
+    transition: border-color 0.12s;
+  }
+  .range-group input[type="number"]:focus { border-color: var(--blue); }
+  .range-sep { font-size: 12px; color: var(--muted); }
+
+  /* ── abandoned toggle ── */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .toggle-switch {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    top: 3px; left: 3px;
+    transition: transform 0.15s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .toggle-switch input:checked ~ .toggle-track { background: var(--danger); }
+  .toggle-switch input:checked ~ .toggle-track::after { transform: translateX(16px); }
+  .toggle-label { font-size: 13px; }
+  .toggle-sub { font-size: 11px; color: var(--muted); }
+
+  /* ── preview bar ── */
+  .preview-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .preview-stats {
+    display: flex;
+    gap: 28px;
+  }
+  .pstat { text-align: center; }
+  .pstat-n {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--accent);
+    line-height: 1;
+    display: block;
+  }
+  .pstat-n.loading { color: var(--muted); font-size: 14px; }
+  .pstat-label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 3px;
+    white-space: nowrap;
+  }
+
+  /* ── SQL preview ── */
+  .sql-block {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: #1a1a1a;
+    color: #c8d0e0;
+    border-radius: 6px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    white-space: pre;
+    margin-top: 12px;
+    line-height: 1.6;
+  }
+  .sql-kw { color: #7ec8f8; }
+  .sql-fn { color: #c9a2f5; }
+  .sql-str { color: #9dd89d; }
+  .sql-cm { color: #636b7a; }
+
+  /* ── export button ── */
+  .export-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0 24px;
+    height: 44px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.12s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .export-btn:hover { opacity: 0.87; }
+  .export-btn:active { transform: scale(0.97); }
+  .export-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+  .export-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0 16px;
+    height: 36px;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.12s, color 0.12s;
+    white-space: nowrap;
+  }
+  .export-btn-secondary:hover { border-color: var(--border-mid); color: var(--accent); }
+
+  .action-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  /* ── toast ── */
+  #toast {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    background: var(--accent);
+    color: #fff;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    padding: 10px 18px;
+    border-radius: 6px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.25s, transform 0.25s;
+    pointer-events: none;
+    z-index: 999;
+  }
+  #toast.show { opacity: 1; transform: none; }
+
+  /* ── section divider ── */
+  .section-sep {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 28px 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-sep::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── utility ── */
+  .hidden { display: none !important; }
+  .mt8 { margin-top: 8px; }
+  .mt12 { margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<div class="shell">
+
+  <!-- ═══════════════════ SIDEBAR ═══════════════════ -->
+  <aside>
+    <div class="logo">
+      <span class="logo-tag">Research Tools</span>
+      <span class="logo-title">Dataset Export</span>
+    </div>
+
+    <div class="nav-section">
+      <span class="nav-label">Export</span>
+      <a class="nav-link active" onclick="scrollTo('#sec-columns')">Column selection</a>
+      <a class="nav-link" onclick="scrollTo('#sec-tasks')">Task filter</a>
+      <a class="nav-link" onclick="scrollTo('#sec-sessions')">Session filter</a>
+      <a class="nav-link" onclick="scrollTo('#sec-demographics')">Demographics</a>
+      <a class="nav-link" onclick="scrollTo('#sec-preview')">Preview &amp; export</a>
+    </div>
+
+    <div class="status-block">
+      <div class="db-status" id="db-status">
+        <span class="db-dot" id="db-dot"></span>
+        <span id="db-label">Checking database…</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════ MAIN ═══════════════════ -->
+  <main>
+
+    <div class="page-header">
+      <span class="page-tag">Handwriting Research Study</span>
+      <h1 class="page-title">Build your export</h1>
+      <p class="page-sub">Select columns, filter tasks and sessions, then download as CSV.</p>
+    </div>
+
+    <!-- ═══ COLUMN SELECTION ═══ -->
+    <div id="sec-columns">
+      <div class="section-sep">Column selection</div>
+
+      <!-- Identifiers -->
+      <div class="card">
+        <div class="card-header open" onclick="toggleCard(this)">
+          <div class="card-header-left">
+            <div class="card-icon">ID</div>
+            <div>
+              <div class="card-title">Identifiers</div>
+              <div class="card-subtitle">Session &amp; task keys</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="card-badge zero" id="badge-id">0 selected</span>
+            <span class="card-chevron">▾</span>
+          </div>
+        </div>
+        <div class="card-body open" data-group="id">
+          <div class="select-all-row">
+            <button onclick="selectGroup('id', true)">All</button>
+            <button onclick="selectGroup('id', false)">None</button>
+          </div>
+          <div class="col-grid">
+            <label class="col-toggle" data-col="session_id" data-group="id">
+              <input type="checkbox" onchange="onColChange(this)">
+              <div class="col-toggle-text">
+                <span class="col-name">session_id</span>
+                <span class="col-desc">UUID of the participant session</span>
+              </div>
+            </label>
+            <label class="col-toggle" data-col="task_name" data-group="id">
+              <input type="checkbox" onchange="onColChange(this)">
+              <div class="col-toggle-text">
+                <span class="col-name">task_name</span>
+                <span class="col-desc">e.g. spiral_round, sentence</span>
+              </div>
+            </label>
+            <label class="col-toggle" data-col="task_type" data-group="id">
+              <input type="checkbox" onchange="onColChange(this)">
+              <div class="col-toggle-text">
+                <span class="col-name">task_type</span>
+                <span class="col-desc">shape or writing</span>
+              </div>
+            </label>
+            <label class="col-toggle" data-col="orientation" data-group="id">
+              <input type="checkbox" onchange="onColChange(this)">
+              <div class="col-toggle-text">
+                <span class="col-name">orientation</span>
+                <span class="col-desc">horizontal / vertical / null</span>
+              </div>
+            </label>
+            <label class="col-toggle" data-col="task_index" data-group="id">
+              <input type="checkbox" onchange="onColChange(this)">
+              <div class="col-toggle-text">
+                <span class="col-name">task_index</span>
+                <span class="col-desc">0-based repetition number</span>
+              </div>
+            </label>
+            <label class="col-toggle" data-col="stroke_index" data-group="id">
+              <input type="checkbox" onchange="onColChange(this)">
+              <div class="col-toggle-text">
+                <span class="col-name">stroke_index</span>
+                <span class="col-desc">Pen-down to pen-up index</span>
+              </div>
+            </label>
+            <label class="col-toggle" data-col="point_index" data-group="id">
+              <input type="checkbox" onchange="onColChange(this)">
+              <div class="col-toggle-text">
+                <span class="col-name">point_index</span>
+                <span class="col-desc">Sample index within stroke</span>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Position -->
+      <div class="card">
+        <div class="card-header open" onclick="toggleCard(this)">
+          <div class="card-header-left">
+            <div class="card-icon">XY</div>
+            <div>
+              <div class="card-title">Position</div>
+              <div class="card-subtitle">Spatial coordinates in mm</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="card-badge" id="badge-position">2 selected</span>
+            <span class="card-chevron">▾</span>
+          </div>
+        </div>
+        <div class="card-body open" data-group="position">
+          <div class="select-all-row">
+            <button onclick="selectGroup('position', true)">All</button>
+            <button onclick="selectGroup('position', false)">None</button>
+          </div>
+          <div class="col-grid">
+            <label class="col-toggle selected" data-col="x" data-group="position">
+              <input type="checkbox" checked onchange="onColChange(this)">
+              <div class="col-toggle-text">
+                <span class="col-name">x</span>
+                <span class="col-desc">mm from start dot, right +</span>
+              </div>
+            </label>
+            <label class="col-toggle selected" data-col="y" data-group="position">
+              <input type="checkbox" checked onchange="onColChange(this)">
+              <div class="col-toggle-text">
+                <span class="col-name">y</span>
+                <span class="col-desc">mm from start dot, up +</span>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timing -->
+      <div class="card">
+        <div class="card-header" onclick="toggleCard(this)">
+          <div class="card-header-left">
+            <div class="card-icon">T</div>
+            <div>
+              <div class="card-title">Timing</div>
+              <div class="card-subtitle">Temporal data</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="card-badge zero" id="badge-timing">0 selected</span>
+            <span class="card-chevron">▾</span>
+          </div>
+        </div>
+        <div class="card-body" data-group="timing">
+          <div class="select-all-row">
+            <button onclick="selectGroup('timing', true)">All</button>
+            <button onclick="selectGroup('timing', false)">None</button>
+          </div>
+          <div class="col-grid">
+            <label class="col-toggle" data-col="time_ms" data-group="timing">
+              <input type="checkbox" onchange="onColChange(this)">
+              <div class="col-toggle-text">
+                <span class="col-name">time_ms</span>
+                <span class="col-desc">ms since page load</span>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pressure & Tilt -->
+      <div class="card">
+        <div class="card-header" onclick="toggleCard(this)">
+          <div class="card-header-left">
+            <div class="card-icon">P/T</div>
+            <div>
+              <div class="card-title">Pressure &amp; Tilt</div>
+              <div class="card-subtitle">Stylus sensor data (Apple Pencil)</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="card-badge zero" id="badge-sensor">0 selected</span>
+            <span class="card-chevron">▾</span>
+          </div>
+        </div>
+        <div class="card-body" data-group="sensor">
+          <div class="select-all-row">
+            <button onclick="selectGroup('sensor', true)">All</button>
+            <button onclick="selectGroup('sensor', false)">None</button>
+          </div>
+          <div class="col-grid">
+            <label class="col-toggle" data-col="pressure" data-group="sensor">
+              <input type="checkbox" onchange="onColChange(this)">
+              <div class="col-toggle-text">
+                <span class="col-name">pressure</span>
+                <span class="col-desc">Tip force 0.0–1.0, nullable</span>
+              </div>
+            </label>
+            <label class="col-toggle" data-col="tilt_x_deg" data-group="sensor">
+              <input type="checkbox" onchange="onColChange(this)">
+              <div class="col-toggle-text">
+                <span class="col-name">tilt_x_deg</span>
+                <span class="col-desc">Pen tilt X in degrees</span>
+              </div>
+            </label>
+            <label class="col-toggle" data-col="tilt_y_deg" data-group="sensor">
+              <input type="checkbox" onchange="onColChange(this)">
+              <div class="col-toggle-text">
+                <span class="col-name">tilt_y_deg</span>
+                <span class="col-desc">Pen tilt Y in degrees</span>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input device type -->
+      <div class="card">
+        <div class="card-header" onclick="toggleCard(this)">
+          <div class="card-header-left">
+            <div class="card-icon">IN</div>
+            <div>
+              <div class="card-title">Input Device</div>
+              <div class="card-subtitle">Pointer type per point</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="card-badge zero" id="badge-input">0 selected</span>
+            <span class="card-chevron">▾</span>
+          </div>
+        </div>
+        <div class="card-body" data-group="input">
+          <div class="select-all-row">
+            <button onclick="selectGroup('input', true)">All</button>
+            <button onclick="selectGroup('input', false)">None</button>
+          </div>
+          <div class="col-grid">
+            <label class="col-toggle" data-col="pointer_type" data-group="input">
+              <input type="checkbox" onchange="onColChange(this)">
+              <div class="col-toggle-text">
+                <span class="col-name">pointer_type</span>
+                <span class="col-desc">pen / touch / mouse</span>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TASK FILTER ═══ -->
+    <div id="sec-tasks">
+      <div class="section-sep">Task filter</div>
+      <div class="card">
+        <div class="card-header open" onclick="toggleCard(this)">
+          <div class="card-header-left">
+            <div class="card-icon">▤</div>
+            <div>
+              <div class="card-title">Tasks to include</div>
+              <div class="card-subtitle">All selected by default</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="card-badge" id="badge-tasks">11 of 11</span>
+            <span class="card-chevron">▾</span>
+          </div>
+        </div>
+        <div class="card-body open">
+
+          <div class="task-type-row">
+            <button class="type-pill on" id="pill-all" onclick="filterType('all')">All</button>
+            <button class="type-pill" id="pill-shape" onclick="filterType('shape')">Shape only</button>
+            <button class="type-pill" id="pill-writing" onclick="filterType('writing')">Writing only</button>
+          </div>
+
+          <div class="select-all-row">
+            <button onclick="selectAllTasks(true)">Select all</button>
+            <button onclick="selectAllTasks(false)">Deselect all</button>
+          </div>
+
+          <div class="task-grid" id="task-grid">
+            <!-- injected by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SESSION FILTER ═══ -->
+    <div id="sec-sessions">
+      <div class="section-sep">Session filter</div>
+      <div class="card">
+        <div class="card-header open" onclick="toggleCard(this)">
+          <div class="card-header-left">
+            <div class="card-icon">⊙</div>
+            <div>
+              <div class="card-title">Session &amp; data quality</div>
+              <div class="card-subtitle">Control which sessions are included</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="card-chevron">▾</span>
+          </div>
+        </div>
+        <div class="card-body open">
+
+          <div class="filter-row">
+            <div>
+              <div class="filter-label">Completed sessions</div>
+              <div class="filter-hint">Exclude sessions not yet finished</div>
+            </div>
+            <div class="filter-control">
+              <div class="toggle-row">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="tog-completed" checked onchange="updatePreview()">
+                  <span class="toggle-track"></span>
+                </label>
+                <div>
+                  <div class="toggle-label">Completed sessions only</div>
+                  <div class="toggle-sub">sessions.completed = true</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-row">
+            <div>
+              <div class="filter-label">Abandoned sessions</div>
+              <div class="filter-hint">Include data from participants who restarted</div>
+            </div>
+            <div class="filter-control">
+              <div class="toggle-row">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="tog-abandoned" onchange="updatePreview()">
+                  <span class="toggle-track"></span>
+                </label>
+                <div>
+                  <div class="toggle-label" id="abandoned-label">Exclude abandoned</div>
+                  <div class="toggle-sub">sessions.abandoned = false</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-row">
+            <div>
+              <div class="filter-label">Input device</div>
+              <div class="filter-hint">Filter by device used in the session</div>
+            </div>
+            <div class="filter-control">
+              <div class="inline-pills">
+                <button class="i-pill any-pill on" data-dev="any" onclick="toggleDevice(this)">Any device</button>
+                <button class="i-pill" data-dev="apple-pencil" onclick="toggleDevice(this)">Apple Pencil</button>
+                <button class="i-pill" data-dev="stylus-other" onclick="toggleDevice(this)">Other stylus</button>
+                <button class="i-pill" data-dev="finger" onclick="toggleDevice(this)">Finger</button>
+                <button class="i-pill" data-dev="mouse" onclick="toggleDevice(this)">Mouse</button>
+                <button class="i-pill" data-dev="trackpad" onclick="toggleDevice(this)">Trackpad</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ DEMOGRAPHICS ═══ -->
+    <div id="sec-demographics">
+      <div class="section-sep">Demographic filters</div>
+      <div class="card">
+        <div class="card-header open" onclick="toggleCard(this)">
+          <div class="card-header-left">
+            <div class="card-icon">Σ</div>
+            <div>
+              <div class="card-title">Participant demographics</div>
+              <div class="card-subtitle">Filter by intake form responses</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="card-chevron">▾</span>
+          </div>
+        </div>
+        <div class="card-body open">
+
+          <div class="filter-row">
+            <div>
+              <div class="filter-label">Parkinson's diagnosis</div>
+            </div>
+            <div class="filter-control">
+              <div class="inline-pills">
+                <button class="i-pill any-pill on" data-pd="any" onclick="togglePD(this)">All participants</button>
+                <button class="i-pill" data-pd="yes" onclick="togglePD(this)">Diagnosed PD</button>
+                <button class="i-pill" data-pd="no" onclick="togglePD(this)">No PD</button>
+                <button class="i-pill" data-pd="null" onclick="togglePD(this)">Unsure / not stated</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-row">
+            <div>
+              <div class="filter-label">Parkinson's stage</div>
+              <div class="filter-hint">Hoehn &amp; Yahr scale</div>
+            </div>
+            <div class="filter-control">
+              <div class="inline-pills" id="pd-stage-pills">
+                <button class="i-pill any-pill on" data-stage="any" onclick="toggleStage(this)">Any stage</button>
+                <button class="i-pill" data-stage="1" onclick="toggleStage(this)">Stage 1</button>
+                <button class="i-pill" data-stage="2" onclick="toggleStage(this)">Stage 2</button>
+                <button class="i-pill" data-stage="3" onclick="toggleStage(this)">Stage 3</button>
+                <button class="i-pill" data-stage="4" onclick="toggleStage(this)">Stage 4</button>
+                <button class="i-pill" data-stage="5" onclick="toggleStage(this)">Stage 5</button>
+                <button class="i-pill" data-stage="unknown" onclick="toggleStage(this)">Unknown</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-row">
+            <div>
+              <div class="filter-label">Gender</div>
+            </div>
+            <div class="filter-control">
+              <div class="inline-pills">
+                <button class="i-pill any-pill on" data-gender="any" onclick="toggleGender(this)">All</button>
+                <button class="i-pill" data-gender="male" onclick="toggleGender(this)">Male</button>
+                <button class="i-pill" data-gender="female" onclick="toggleGender(this)">Female</button>
+                <button class="i-pill" data-gender="non-binary" onclick="toggleGender(this)">Non-binary</button>
+                <button class="i-pill" data-gender="prefer-not-to-say" onclick="toggleGender(this)">Not stated</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-row">
+            <div>
+              <div class="filter-label">Dominant hand</div>
+            </div>
+            <div class="filter-control">
+              <div class="inline-pills">
+                <button class="i-pill any-pill on" data-hand="any" onclick="toggleHand(this)">All</button>
+                <button class="i-pill" data-hand="right" onclick="toggleHand(this)">Right</button>
+                <button class="i-pill" data-hand="left" onclick="toggleHand(this)">Left</button>
+                <button class="i-pill" data-hand="ambidextrous" onclick="toggleHand(this)">Ambidextrous</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-row">
+            <div>
+              <div class="filter-label">Other neurological conditions</div>
+            </div>
+            <div class="filter-control">
+              <div class="inline-pills">
+                <button class="i-pill any-pill on" data-neuro="any" onclick="toggleNeuro(this)">All</button>
+                <button class="i-pill" data-neuro="none" onclick="toggleNeuro(this)">None</button>
+                <button class="i-pill" data-neuro="essential-tremor" onclick="toggleNeuro(this)">Essential tremor</button>
+                <button class="i-pill" data-neuro="ms" onclick="toggleNeuro(this)">MS</button>
+                <button class="i-pill" data-neuro="stroke" onclick="toggleNeuro(this)">Stroke</button>
+                <button class="i-pill" data-neuro="other" onclick="toggleNeuro(this)">Other</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-row">
+            <div>
+              <div class="filter-label">Hand steadiness today</div>
+            </div>
+            <div class="filter-control">
+              <div class="inline-pills">
+                <button class="i-pill any-pill on" data-steady="any" onclick="toggleSteady(this)">All</button>
+                <button class="i-pill" data-steady="very-steady" onclick="toggleSteady(this)">Very steady</button>
+                <button class="i-pill" data-steady="mostly-steady" onclick="toggleSteady(this)">Mostly steady</button>
+                <button class="i-pill" data-steady="moderate-tremor" onclick="toggleSteady(this)">Moderate tremor</button>
+                <button class="i-pill" data-steady="significant-tremor" onclick="toggleSteady(this)">Significant tremor</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-row">
+            <div>
+              <div class="filter-label">Age range</div>
+            </div>
+            <div class="filter-control">
+              <div class="range-group">
+                <input type="number" id="age-min" placeholder="Min" min="5" max="110" oninput="updatePreview()">
+                <span class="range-sep">–</span>
+                <input type="number" id="age-max" placeholder="Max" min="5" max="110" oninput="updatePreview()">
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-row">
+            <div>
+              <div class="filter-label">Writing style</div>
+            </div>
+            <div class="filter-control">
+              <div class="inline-pills">
+                <button class="i-pill any-pill on" data-style="any" onclick="toggleStyle(this)">All</button>
+                <button class="i-pill" data-style="print" onclick="toggleStyle(this)">Print</button>
+                <button class="i-pill" data-style="cursive" onclick="toggleStyle(this)">Cursive</button>
+                <button class="i-pill" data-style="mixed" onclick="toggleStyle(this)">Mixed</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PREVIEW & EXPORT ═══ -->
+    <div id="sec-preview">
+      <div class="section-sep">Preview &amp; export</div>
+
+      <div class="preview-bar">
+        <div class="preview-stats">
+          <div class="pstat">
+            <span class="pstat-n" id="prev-cols">2</span>
+            <div class="pstat-label">columns</div>
+          </div>
+          <div class="pstat">
+            <span class="pstat-n loading" id="prev-sessions">–</span>
+            <div class="pstat-label">sessions</div>
+          </div>
+          <div class="pstat">
+            <span class="pstat-n loading" id="prev-points">–</span>
+            <div class="pstat-label">est. rows</div>
+          </div>
+          <div class="pstat">
+            <span class="pstat-n loading" id="prev-size">–</span>
+            <div class="pstat-label">est. size</div>
+          </div>
+        </div>
+        <div class="action-row">
+          <button class="export-btn-secondary" onclick="copySQL()">Copy SQL</button>
+          <button class="export-btn" id="btn-export" onclick="doExport()">
+            ↓ Download CSV
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header open" onclick="toggleCard(this)">
+          <div class="card-header-left">
+            <div class="card-icon">SQL</div>
+            <div>
+              <div class="card-title">Generated query</div>
+              <div class="card-subtitle">Runs against the handwriting database</div>
+            </div>
+          </div>
+          <span class="card-chevron">▾</span>
+        </div>
+        <div class="card-body open">
+          <div class="sql-block" id="sql-preview"></div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<script>
+'use strict';
+
+// ══════════════════════════════════════════════════════════
+// TASK DEFINITIONS
+// ══════════════════════════════════════════════════════════
+const TASKS = [
+  { name: 'straight_line', label: 'Straight line',    type: 'shape',   orient: 'horizontal / vertical', reps: 3 },
+  { name: 'arc',           label: 'Arc',              type: 'shape',   orient: 'horizontal / vertical', reps: 3 },
+  { name: 'wave',          label: 'Wave',             type: 'shape',   orient: 'horizontal / vertical', reps: 3 },
+  { name: 'spiral_round',  label: 'Spiral (round)',   type: 'shape',   orient: null,                    reps: 6 },
+  { name: 'spiral_square', label: 'Spiral (square)',  type: 'shape',   orient: null,                    reps: 6 },
+  { name: 'healthy_control',    label: 'Healthy control text', type: 'writing', orient: null, reps: 1 },
+  { name: 'parkinsons_disease', label: 'PD stimulus text',     type: 'writing', orient: null, reps: 1 },
+  { name: 'sentence',           label: 'Free sentence',        type: 'writing', orient: null, reps: 1 },
+];
+
+// Column definitions
+const COL_GROUPS = {
+  id:       ['session_id','task_name','task_type','orientation','task_index','stroke_index','point_index'],
+  position: ['x','y'],
+  timing:   ['time_ms'],
+  sensor:   ['pressure','tilt_x_deg','tilt_y_deg'],
+  input:    ['pointer_type'],
+};
+
+// State
+const state = {
+  selectedCols: new Set(['x','y']),
+  selectedTasks: new Set(TASKS.map(t => t.name)),
+  completedOnly: true,
+  includeAbandoned: false,
+  deviceFilter: 'any',
+  pdFilter: 'any',
+  stageFilter: 'any',
+  genderFilter: 'any',
+  handFilter: 'any',
+  neuroFilter: 'any',
+  steadyFilter: 'any',
+  ageMin: null,
+  ageMax: null,
+  styleFilter: 'any',
+};
+
+// ══════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════
+function init() {
+  buildTaskGrid();
+  updatePreview();
+  checkDB();
+  // Sync initial toggle states
+  document.getElementById('tog-completed').checked = state.completedOnly;
+  document.getElementById('tog-abandoned').checked = state.includeAbandoned;
+  updateBadges();
+}
+
+// ══════════════════════════════════════════════════════════
+// DB STATUS
+// ══════════════════════════════════════════════════════════
+async function checkDB() {
+  try {
+    const r = await fetch('/session/check', { method: 'GET' });
+    const dot = document.getElementById('db-dot');
+    const lbl = document.getElementById('db-label');
+    if (r.ok) {
+      dot.className = 'db-dot';
+      lbl.textContent = 'Database connected';
+    } else {
+      dot.className = 'db-dot warn';
+      lbl.textContent = 'Server returned error';
+    }
+  } catch {
+    document.getElementById('db-dot').className = 'db-dot warn';
+    document.getElementById('db-label').textContent = 'Cannot reach server';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// TASK GRID
+// ══════════════════════════════════════════════════════════
+function buildTaskGrid() {
+  const grid = document.getElementById('task-grid');
+  grid.innerHTML = '';
+  TASKS.forEach(t => {
+    const el = document.createElement('label');
+    el.className = 'task-toggle selected';
+    el.dataset.task = t.name;
+    el.dataset.type = t.type;
+    el.innerHTML = `
+      <input type="checkbox" checked onchange="onTaskChange(this)">
+      <div class="task-name-block">
+        <span class="t-name">${t.label}</span>
+        <span class="t-meta">${t.type}${t.orient ? ' · ' + t.orient : ''} · ×${t.reps}</span>
+      </div>
+    `;
+    grid.appendChild(el);
+  });
+}
+
+function filterType(type) {
+  ['all','shape','writing'].forEach(id => {
+    document.getElementById('pill-'+id).classList.toggle('on', id === type);
+  });
+  document.querySelectorAll('.task-toggle').forEach(el => {
+    const matches = type === 'all' || el.dataset.type === type;
+    el.style.display = matches ? '' : 'none';
+  });
+}
+
+function onTaskChange(cb) {
+  const label = cb.closest('.task-toggle');
+  const name = label.dataset.task;
+  if (cb.checked) { state.selectedTasks.add(name); label.classList.add('selected'); }
+  else            { state.selectedTasks.delete(name); label.classList.remove('selected'); }
+  updateTaskBadge();
+  updatePreview();
+}
+
+function selectAllTasks(val) {
+  document.querySelectorAll('.task-toggle').forEach(el => {
+    const cb = el.querySelector('input');
+    cb.checked = val;
+    if (val) { state.selectedTasks.add(el.dataset.task); el.classList.add('selected'); }
+    else     { state.selectedTasks.delete(el.dataset.task); el.classList.remove('selected'); }
+  });
+  updateTaskBadge();
+  updatePreview();
+}
+
+function updateTaskBadge() {
+  const n = state.selectedTasks.size;
+  const badge = document.getElementById('badge-tasks');
+  badge.textContent = `${n} of ${TASKS.length}`;
+  badge.className = 'card-badge' + (n === 0 ? ' zero' : '');
+}
+
+// ══════════════════════════════════════════════════════════
+// COLUMN TOGGLES
+// ══════════════════════════════════════════════════════════
+function onColChange(cb) {
+  const label = cb.closest('.col-toggle');
+  const col = label.dataset.col;
+  const group = label.dataset.group;
+  if (cb.checked) { state.selectedCols.add(col); label.classList.add('selected'); }
+  else            { state.selectedCols.delete(col); label.classList.remove('selected'); }
+  updateBadges();
+  updatePreview();
+}
+
+function selectGroup(group, val) {
+  document.querySelectorAll(`.col-toggle[data-group="${group}"]`).forEach(el => {
+    const cb = el.querySelector('input');
+    cb.checked = val;
+    const col = el.dataset.col;
+    if (val) { state.selectedCols.add(col); el.classList.add('selected'); }
+    else     { state.selectedCols.delete(col); el.classList.remove('selected'); }
+  });
+  updateBadges();
+  updatePreview();
+}
+
+function updateBadges() {
+  Object.keys(COL_GROUPS).forEach(g => {
+    const cols = COL_GROUPS[g];
+    const n = cols.filter(c => state.selectedCols.has(c)).length;
+    const badge = document.getElementById('badge-'+g);
+    badge.textContent = `${n} selected`;
+    badge.className = 'card-badge' + (n === 0 ? ' zero' : '');
+  });
+  document.getElementById('prev-cols').textContent = state.selectedCols.size;
+}
+
+// ══════════════════════════════════════════════════════════
+// SESSION FILTERS
+// ══════════════════════════════════════════════════════════
+document.getElementById('tog-completed').addEventListener('change', function() {
+  state.completedOnly = this.checked;
+  updatePreview();
+});
+document.getElementById('tog-abandoned').addEventListener('change', function() {
+  state.includeAbandoned = this.checked;
+  document.getElementById('abandoned-label').textContent =
+    this.checked ? 'Include abandoned' : 'Exclude abandoned';
+  updatePreview();
+});
+
+function toggleDevice(btn) {
+  const dev = btn.dataset.dev;
+  document.querySelectorAll('[data-dev]').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  state.deviceFilter = dev;
+  updatePreview();
+}
+
+// ══════════════════════════════════════════════════════════
+// DEMOGRAPHIC PILL HELPERS
+// ══════════════════════════════════════════════════════════
+function makePillToggle(attr, stateKey) {
+  return function(btn) {
+    document.querySelectorAll(`[data-${attr}]`).forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    state[stateKey] = btn.dataset[attr];
+    updatePreview();
+  };
+}
+const togglePD     = makePillToggle('pd',     'pdFilter');
+const toggleStage  = makePillToggle('stage',  'stageFilter');
+const toggleGender = makePillToggle('gender', 'genderFilter');
+const toggleHand   = makePillToggle('hand',   'handFilter');
+const toggleNeuro  = makePillToggle('neuro',  'neuroFilter');
+const toggleSteady = makePillToggle('steady', 'steadyFilter');
+const toggleStyle  = makePillToggle('style',  'styleFilter');
+
+// ══════════════════════════════════════════════════════════
+// SQL GENERATION
+// ══════════════════════════════════════════════════════════
+function buildSQL() {
+  const cols = Array.from(state.selectedCols);
+  if (cols.length === 0) return '-- No columns selected';
+
+  // Determine which columns come from which table
+  const strokeCols  = ['task_type','task_name','orientation','task_index',
+                        'stroke_index','point_index','x','y','time_ms',
+                        'pressure','tilt_x_deg','tilt_y_deg','pointer_type'];
+  const sessionCols = ['session_id'];
+
+  const selectParts = cols.map(c => {
+    if (c === 'session_id') return 'st.session_id';
+    return strokeCols.includes(c) ? `st.${c}` : `s.${c}`;
+  });
+
+  const lines = [];
+  lines.push(`SELECT`);
+  selectParts.forEach((p, i) => {
+    lines.push(`  ${p}${i < selectParts.length - 1 ? ',' : ''}`);
+  });
+  lines.push(`FROM strokes st`);
+  lines.push(`JOIN sessions s ON st.session_id = s.id`);
+
+  const where = [];
+
+  // Task filter
+  if (state.selectedTasks.size > 0 && state.selectedTasks.size < TASKS.length) {
+    const names = Array.from(state.selectedTasks).map(n => `'${n}'`).join(', ');
+    where.push(`st.task_name IN (${names})`);
+  }
+
+  // Session filters
+  if (state.completedOnly) where.push(`s.completed = true`);
+  if (!state.includeAbandoned) where.push(`s.abandoned = false`);
+  if (state.deviceFilter !== 'any') where.push(`s.input_device = '${state.deviceFilter}'`);
+
+  // Demographics
+  if (state.pdFilter !== 'any') {
+    if (state.pdFilter === 'yes')  where.push(`s.parkinsons_diagnosis = true`);
+    if (state.pdFilter === 'no')   where.push(`s.parkinsons_diagnosis = false`);
+    if (state.pdFilter === 'null') where.push(`s.parkinsons_diagnosis IS NULL`);
+  }
+  if (state.stageFilter !== 'any')  where.push(`s.parkinsons_stage = '${state.stageFilter}'`);
+  if (state.genderFilter !== 'any') where.push(`s.gender = '${state.genderFilter}'`);
+  if (state.handFilter !== 'any')   where.push(`s.handedness = '${state.handFilter}'`);
+  if (state.neuroFilter !== 'any')  where.push(`s.other_conditions = '${state.neuroFilter}'`);
+  if (state.steadyFilter !== 'any') where.push(`s.hand_steadiness = '${state.steadyFilter}'`);
+  if (state.styleFilter !== 'any')  where.push(`s.writing_style = '${state.styleFilter}'`);
+
+  const ageMin = parseInt(document.getElementById('age-min').value);
+  const ageMax = parseInt(document.getElementById('age-max').value);
+  if (!isNaN(ageMin)) where.push(`s.age >= ${ageMin}`);
+  if (!isNaN(ageMax)) where.push(`s.age <= ${ageMax}`);
+
+  if (where.length) {
+    lines.push(`WHERE`);
+    where.forEach((w, i) => {
+      lines.push(`  ${w}${i < where.length - 1 ? '\n  AND' : ''}`);
+    });
+  }
+
+  lines.push(`ORDER BY st.session_id, st.task_name, st.task_index,`);
+  lines.push(`         st.stroke_index, st.point_index;`);
+
+  return lines.join('\n');
+}
+
+function highlightSQL(sql) {
+  const kws = ['SELECT','FROM','JOIN','ON','WHERE','AND','ORDER','BY','IN','IS','NOT','NULL','true','false','ASC','DESC'];
+  let out = sql
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  kws.forEach(kw => {
+    out = out.replace(new RegExp(`\\b${kw}\\b`, 'g'), `<span class="sql-kw">${kw}</span>`);
+  });
+  out = out.replace(/'([^']*)'/g, `<span class="sql-str">'$1'</span>`);
+  return out;
+}
+
+// ══════════════════════════════════════════════════════════
+// PREVIEW UPDATE
+// ══════════════════════════════════════════════════════════
+function updatePreview() {
+  const sql = buildSQL();
+  document.getElementById('sql-preview').innerHTML = highlightSQL(sql);
+  updateBadges();
+  updateTaskBadge();
+
+  // Estimate stats from server
+  estimateStats();
+}
+
+let estimateTimer = null;
+function estimateStats() {
+  // Debounce
+  clearTimeout(estimateTimer);
+  estimateTimer = setTimeout(async () => {
+    const els = ['prev-sessions','prev-points','prev-size'];
+    els.forEach(id => {
+      const el = document.getElementById(id);
+      el.textContent = '…';
+      el.className = 'pstat-n loading';
+    });
+
+    try {
+      const res = await fetch('/export/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildPayload()),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        const setN = (id, val) => {
+          const el = document.getElementById(id);
+          el.textContent = val;
+          el.className = 'pstat-n';
+        };
+        setN('prev-sessions', d.sessions.toLocaleString());
+        setN('prev-points',   d.points.toLocaleString());
+        setN('prev-size',     fmtSize(d.points * state.selectedCols.size * 8));
+      } else {
+        throw new Error();
+      }
+    } catch {
+      // Server might not be running — show placeholder
+      ['prev-sessions','prev-points','prev-size'].forEach(id => {
+        const el = document.getElementById(id);
+        el.textContent = '—';
+        el.className = 'pstat-n loading';
+      });
+    }
+  }, 400);
+}
+
+function fmtSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(0) + ' KB';
+  return (bytes/1024/1024).toFixed(1) + ' MB';
+}
+
+// ══════════════════════════════════════════════════════════
+// EXPORT PAYLOAD
+// ══════════════════════════════════════════════════════════
+function buildPayload() {
+  return {
+    columns:           Array.from(state.selectedCols),
+    tasks:             Array.from(state.selectedTasks),
+    completed_only:    state.completedOnly,
+    include_abandoned: state.includeAbandoned,
+    device:            state.deviceFilter,
+    pd_diagnosis:      state.pdFilter,
+    pd_stage:          state.stageFilter,
+    gender:            state.genderFilter,
+    handedness:        state.handFilter,
+    other_conditions:  state.neuroFilter,
+    hand_steadiness:   state.steadyFilter,
+    writing_style:     state.styleFilter,
+    age_min:           parseInt(document.getElementById('age-min').value) || null,
+    age_max:           parseInt(document.getElementById('age-max').value) || null,
+  };
+}
+
+// ══════════════════════════════════════════════════════════
+// EXPORT
+// ══════════════════════════════════════════════════════════
+async function doExport() {
+  if (state.selectedCols.size === 0) {
+    toast('Select at least one column before exporting.');
+    return;
+  }
+  if (state.selectedTasks.size === 0) {
+    toast('Select at least one task before exporting.');
+    return;
+  }
+
+  const btn = document.getElementById('btn-export');
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+
+  try {
+    const res = await fetch('/export/csv', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(buildPayload()),
+    });
+
+    if (!res.ok) {
+      const msg = await res.text();
+      toast('Export failed: ' + (msg || 'server error'));
+      return;
+    }
+
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const date = new Date().toISOString().slice(0,10);
+    a.href     = url;
+    a.download = `handwriting_export_${date}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Download started.');
+  } catch {
+    toast('Could not reach server.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '↓ Download CSV';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// COPY SQL
+// ══════════════════════════════════════════════════════════
+function copySQL() {
+  const sql = buildSQL();
+  navigator.clipboard.writeText(sql).then(() => toast('SQL copied to clipboard.'));
+}
+
+// ══════════════════════════════════════════════════════════
+// UI HELPERS
+// ══════════════════════════════════════════════════════════
+function toggleCard(header) {
+  header.classList.toggle('open');
+  const body = header.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+function scrollTo(id) {
+  const el = document.querySelector(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ══════════════════════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════════════════════
+init();
+</script>
+</body>
+</html>

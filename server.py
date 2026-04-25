@@ -4,6 +4,7 @@ Handwriting Study — Server
 ==========================
 Serves the participant app and canvas fragments, manages device tokens
 and sessions, and persists stroke data to a PostgreSQL database.
+Also serves the researcher export tool and provides CSV export endpoints.
 
 Usage
 -----
@@ -22,7 +23,9 @@ Dependencies
 """
 
 import argparse
+import csv
 import datetime
+import io
 import json
 import os
 import secrets
@@ -38,10 +41,11 @@ import psycopg2.extras
 # Configuration
 # ---------------------------------------------------------------------------
 
-ROOT_DIR   = os.path.dirname(os.path.abspath(__file__))
-TASKS_DIR  = os.path.join(ROOT_DIR, 'tasks')
-TASKS_JSON = os.path.join(TASKS_DIR, 'tasks.json')
-MAIN_HTML  = os.path.join(ROOT_DIR, 'pencil-capture.html')
+ROOT_DIR    = os.path.dirname(os.path.abspath(__file__))
+TASKS_DIR   = os.path.join(ROOT_DIR, 'tasks')
+TASKS_JSON  = os.path.join(TASKS_DIR, 'tasks.json')
+MAIN_HTML   = os.path.join(ROOT_DIR, 'pencil-capture.html')
+EXPORT_HTML = os.path.join(ROOT_DIR, 'researcher-export.html')
 
 # Valid task_name values must match the strokes partition list in schema.sql.
 # The server validates every /strokes POST against this set so a misconfigured
@@ -50,6 +54,14 @@ VALID_TASK_NAMES = {
     'straight_line', 'arc', 'wave',
     'spiral_round', 'spiral_square',
     'healthy_control', 'parkinsons_disease', 'sentence',
+}
+
+# Allowed stroke column names for export — validated before interpolation into
+# the SELECT list, since column names cannot be passed as psycopg2 parameters.
+EXPORT_STROKE_COLS = {
+    'task_type', 'task_name', 'orientation', 'task_index',
+    'stroke_index', 'point_index', 'x', 'y', 'time_ms',
+    'pressure', 'tilt_x_deg', 'tilt_y_deg', 'pointer_type',
 }
 
 VALID_TASK_TYPES   = {'shape', 'writing'}
@@ -101,6 +113,9 @@ class Handler(BaseHTTPRequestHandler):
         elif path == '/session/check':
             self._handle_session_check()
 
+        elif path == '/export':
+            self._serve_file(EXPORT_HTML, 'text/html; charset=utf-8')
+
         else:
             self._404()
 
@@ -115,6 +130,10 @@ class Handler(BaseHTTPRequestHandler):
             self._handle_session_complete()
         elif path == '/strokes':
             self._handle_strokes()
+        elif path == '/export/preview':
+            self._handle_export_preview()
+        elif path == '/export/csv':
+            self._handle_export_csv()
         else:
             self._404()
 
@@ -453,6 +472,204 @@ class Handler(BaseHTTPRequestHandler):
         )
         self._json({'inserted': count})
 
+    # ── export endpoints ─────────────────────────────────────────────────────
+
+    def _build_export_query(self, body, count_only=False):
+        """
+        Build a parameterised (sql, params) tuple from the export payload.
+
+        Column names are validated against EXPORT_STROKE_COLS before being
+        interpolated into the SELECT list — they cannot be passed as psycopg2
+        parameters. All filter values travel as parameters.
+
+        If count_only=True the SELECT returns aggregate counts only (used by
+        /export/preview to estimate result size without fetching all rows).
+        """
+        if count_only:
+            select_clause = (
+                'COUNT(*) AS total_points, '
+                'COUNT(DISTINCT st.session_id) AS total_sessions'
+            )
+        else:
+            requested = body.get('columns', ['x', 'y'])
+            safe_parts = []
+            for col in requested:
+                if col == 'session_id':
+                    safe_parts.append('st.session_id')
+                elif col in EXPORT_STROKE_COLS:
+                    safe_parts.append(f'st.{col}')
+                # silently skip any unrecognised column names
+            if not safe_parts:
+                safe_parts = ['st.x', 'st.y']
+            select_clause = ', '.join(safe_parts)
+
+        sql = (
+            f'SELECT {select_clause}\n'
+            f'FROM strokes st\n'
+            f'JOIN sessions s ON st.session_id = s.id\n'
+        )
+
+        params = []
+        conditions = []
+
+        # Task filter
+        tasks = [t for t in body.get('tasks', []) if t in VALID_TASK_NAMES]
+        if tasks and len(tasks) < len(VALID_TASK_NAMES):
+            placeholders = ', '.join(['%s'] * len(tasks))
+            conditions.append(f'st.task_name IN ({placeholders})')
+            params.extend(tasks)
+
+        # Session quality
+        if body.get('completed_only', True):
+            conditions.append('s.completed = true')
+        if not body.get('include_abandoned', False):
+            conditions.append('s.abandoned = false')
+
+        # Input device
+        device = body.get('device', 'any')
+        if device and device != 'any':
+            conditions.append('s.input_device = %s')
+            params.append(device)
+
+        # Parkinson's diagnosis
+        pd = body.get('pd_diagnosis', 'any')
+        if pd == 'yes':
+            conditions.append('s.parkinsons_diagnosis = true')
+        elif pd == 'no':
+            conditions.append('s.parkinsons_diagnosis = false')
+        elif pd == 'null':
+            conditions.append('s.parkinsons_diagnosis IS NULL')
+
+        # Parkinson's stage
+        stage = body.get('pd_stage', 'any')
+        if stage and stage != 'any':
+            conditions.append('s.parkinsons_stage = %s')
+            params.append(stage)
+
+        # Gender
+        gender = body.get('gender', 'any')
+        if gender and gender != 'any':
+            conditions.append('s.gender = %s')
+            params.append(gender)
+
+        # Handedness
+        hand = body.get('handedness', 'any')
+        if hand and hand != 'any':
+            conditions.append('s.handedness = %s')
+            params.append(hand)
+
+        # Other neurological conditions
+        neuro = body.get('other_conditions', 'any')
+        if neuro and neuro != 'any':
+            conditions.append('s.other_conditions = %s')
+            params.append(neuro)
+
+        # Hand steadiness
+        steady = body.get('hand_steadiness', 'any')
+        if steady and steady != 'any':
+            conditions.append('s.hand_steadiness = %s')
+            params.append(steady)
+
+        # Writing style
+        style = body.get('writing_style', 'any')
+        if style and style != 'any':
+            conditions.append('s.writing_style = %s')
+            params.append(style)
+
+        # Age range
+        age_min = body.get('age_min')
+        age_max = body.get('age_max')
+        if age_min is not None:
+            conditions.append('s.age >= %s')
+            params.append(int(age_min))
+        if age_max is not None:
+            conditions.append('s.age <= %s')
+            params.append(int(age_max))
+
+        if conditions:
+            sql += 'WHERE ' + '\n  AND '.join(conditions) + '\n'
+
+        if not count_only:
+            sql += (
+                'ORDER BY st.session_id, st.task_name, st.task_index,\n'
+                '         st.stroke_index, st.point_index\n'
+            )
+
+        return sql, params
+
+    def _handle_export_preview(self):
+        """
+        POST /export/preview
+        Returns estimated row and session counts for the current filter set.
+        Used by the researcher UI to populate the preview bar without
+        downloading the full dataset.
+
+        Response: { "sessions": <int>, "points": <int> }
+        """
+        body = self._read_json()
+        if body is None:
+            return
+
+        sql, params = self._build_export_query(body, count_only=True)
+
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(sql, params)
+                    row = cur.fetchone()
+                    points   = int(row[0]) if row else 0
+                    sessions = int(row[1]) if row else 0
+            self._json({'sessions': sessions, 'points': points})
+        except Exception as exc:
+            self._respond(500, str(exc).encode())
+
+    def _handle_export_csv(self):
+        """
+        POST /export/csv
+        Executes the filtered query and streams the result as a CSV download.
+
+        The Content-Disposition header causes browsers to prompt a file save.
+        Rows are fetched in full before writing — for very large datasets
+        consider switching to a named server-side cursor with fetchmany().
+        """
+        body = self._read_json()
+        if body is None:
+            return
+
+        sql, params = self._build_export_query(body, count_only=False)
+
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(sql, params)
+                    col_names = [desc[0] for desc in cur.description]
+                    rows = cur.fetchall()
+
+            buf = io.StringIO()
+            writer = csv.writer(buf)
+            writer.writerow(col_names)
+            writer.writerows(rows)
+            csv_bytes = buf.getvalue().encode('utf-8')
+
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/csv; charset=utf-8')
+            self.send_header(
+                'Content-Disposition',
+                'attachment; filename="handwriting_export.csv"'
+            )
+            self.send_header('Content-Length', str(len(csv_bytes)))
+            self._cors()
+            self.end_headers()
+            self.wfile.write(csv_bytes)
+
+            print(
+                f'[{_ts()}]  Export CSV  '
+                f'rows={len(rows):,}  cols={len(col_names)}'
+            )
+
+        except Exception as exc:
+            self._respond(500, str(exc).encode())
+
     # ── helpers ──────────────────────────────────────────────────────────────
 
     def _serve_file(self, path, content_type):
@@ -531,5 +748,6 @@ if __name__ == '__main__':
 
     print(f'Handwriting study server  —  http://0.0.0.0:{args.port}')
     print(f'Tasks directory:            {TASKS_DIR}')
+    print(f'Researcher export tool:     http://0.0.0.0:{args.port}/export')
     print('Ctrl+C to stop.\n')
     HTTPServer(('0.0.0.0', args.port), Handler).serve_forever()

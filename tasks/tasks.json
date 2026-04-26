@@ -73,7 +73,7 @@
       "orientation": null,
       "repetitions": 6,
       "canvas_html": "trace_spiral_round.html",
-      "instruction": "Trace the spiral starting from the centre dot and working outward - Do not lift your pen from the screen."",
+      "instruction": "Trace the spiral starting from the centre dot and working outward - Do not lift your pen from the screen.",
       "prompt": null,
       "label": "Round Spiral"
     },
@@ -84,7 +84,7 @@
       "orientation": null,
       "repetitions": 6,
       "canvas_html": "trace_spiral_square.html",
-      "instruction": "Trace the square spiral starting from the centre dot and working outward - Do not lift your pen from the screen."",
+      "instruction": "Trace the square spiral starting from the centre dot and working outward - Do not lift your pen from the screen.",
       "prompt": null,
       "label": "Square Spiral"
     },

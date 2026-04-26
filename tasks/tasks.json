@@ -7,7 +7,7 @@
       "orientation": "horizontal",
       "repetitions": 3,
       "canvas_html": "trace_line_horizontal.html",
-      "instruction": "Draw a straight horizontal line as smoothly as you can.",
+      "instruction": "Draw a straight horizontal line as smoothly as you can in one continious motion. Start at the dot.",
       "prompt": null,
       "label": "Straight Line (H)"
     },
@@ -18,7 +18,7 @@
       "orientation": "vertical",
       "repetitions": 3,
       "canvas_html": "trace_line_vertical.html",
-      "instruction": "Draw a straight vertical line as smoothly as you can.",
+      "instruction": "Draw a straight vertical line as smoothly as you can in one continious motion. Start at the dot.",      
       "prompt": null,
       "label": "Straight Line (V)"
     },
@@ -29,7 +29,7 @@
       "orientation": "horizontal",
       "repetitions": 3,
       "canvas_html": "trace_arc_horizontal.html",
-      "instruction": "Trace the arc guide as smoothly as you can.",
+      "instruction": "Trace the arc guide as smoothly as you can in one continious motion. Start at the dot.",
       "prompt": null,
       "label": "Arc (H)"
     },
@@ -40,7 +40,7 @@
       "orientation": "vertical",
       "repetitions": 3,
       "canvas_html": "trace_arc_vertical.html",
-      "instruction": "Trace the arc guide as smoothly as you can.",
+      "instruction": "Trace the arc guide as smoothly as you can in one continious motion. Start at the dot.",
       "prompt": null,
       "label": "Arc (V)"
     },
@@ -51,7 +51,7 @@
       "orientation": "horizontal",
       "repetitions": 3,
       "canvas_html": "trace_wave_horizontal.html",
-      "instruction": "Trace the wave guide as smoothly as you can.",
+      "instruction": "Trace the wave guide as smoothly as you can in one continious motion. Start at the dot.",      
       "prompt": null,
       "label": "Wave (H)"
     },
@@ -62,7 +62,7 @@
       "orientation": "vertical",
       "repetitions": 3,
       "canvas_html": "trace_wave_vertical.html",
-      "instruction": "Trace the wave guide as smoothly as you can.",
+      "instruction": "Trace the wave guide as smoothly as you can in one continious motion - Do not lift your pen from the screen. Start at the dot.",
       "prompt": null,
       "label": "Wave (V)"
     },
@@ -73,7 +73,7 @@
       "orientation": null,
       "repetitions": 6,
       "canvas_html": "trace_spiral_round.html",
-      "instruction": "Trace the spiral starting from the centre dot and working outward.",
+      "instruction": "Trace the spiral starting from the centre dot and working outward - Do not lift your pen from the screen."",
       "prompt": null,
       "label": "Round Spiral"
     },
@@ -84,7 +84,7 @@
       "orientation": null,
       "repetitions": 6,
       "canvas_html": "trace_spiral_square.html",
-      "instruction": "Trace the square spiral starting from the centre dot and working outward.",
+      "instruction": "Trace the square spiral starting from the centre dot and working outward - Do not lift your pen from the screen."",
       "prompt": null,
       "label": "Square Spiral"
     },
@@ -107,7 +107,7 @@
       "repetitions": 1,
       "canvas_html": "trace_writing_lines.html",
       "instruction": "Write the words shown below clearly and naturally, on the lines provided.",
-      "prompt": "Parkinsons Disease",
+      "prompt": "Parkinson's Disease",
       "label": "Parkinson's Disease"
     },
     {

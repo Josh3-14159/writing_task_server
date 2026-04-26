@@ -336,6 +336,44 @@
   .range-group input[type="number"]:focus { border-color: var(--blue); }
   .range-sep { font-size: 12px; color: var(--muted); }
 
+  .datetime-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .datetime-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .datetime-row label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    width: 36px;
+    flex-shrink: 0;
+  }
+  input[type="datetime-local"] {
+    padding: 6px 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--bg);
+    color: var(--accent);
+    outline: none;
+    transition: border-color 0.12s;
+  }
+  input[type="datetime-local"]:focus { border-color: var(--blue); }
+  .date-col-pills {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
   /* ── abandoned toggle ── */
   .toggle-row {
     display: flex;
@@ -877,6 +915,29 @@
             </div>
           </div>
 
+          <div class="filter-row">
+            <div>
+              <div class="filter-label">Date / time range</div>
+              <div class="filter-hint">Filter sessions by timestamp. From-only = after; to-only = before.</div>
+            </div>
+            <div class="filter-control">
+              <div class="date-col-pills">
+                <button class="i-pill any-pill on" data-datecol="started_at" onclick="toggleDateCol(this)">Started at</button>
+                <button class="i-pill" data-datecol="completed_at" onclick="toggleDateCol(this)">Completed at</button>
+              </div>
+              <div class="datetime-group">
+                <div class="datetime-row">
+                  <label>From</label>
+                  <input type="datetime-local" id="date-from" oninput="updatePreview()" title="Leave empty to apply no lower bound">
+                </div>
+                <div class="datetime-row">
+                  <label>To</label>
+                  <input type="datetime-local" id="date-to" oninput="updatePreview()" title="Leave empty to apply no upper bound">
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -1107,6 +1168,7 @@ const state = {
   completedOnly: true,
   includeAbandoned: false,
   deviceFilter: 'any',
+  dateCol: 'started_at',
   pdFilter: 'any',
   stageFilter: 'any',
   genderFilter: 'any',
@@ -1269,6 +1331,13 @@ function toggleDevice(btn) {
   updatePreview();
 }
 
+function toggleDateCol(btn) {
+  document.querySelectorAll('[data-datecol]').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  state.dateCol = btn.dataset.datecol;
+  updatePreview();
+}
+
 // ══════════════════════════════════════════════════════════
 // DEMOGRAPHIC PILL HELPERS
 // ══════════════════════════════════════════════════════════
@@ -1344,6 +1413,13 @@ function buildSQL() {
   const ageMax = parseInt(document.getElementById('age-max').value);
   if (!isNaN(ageMin)) where.push(`s.age >= ${ageMin}`);
   if (!isNaN(ageMax)) where.push(`s.age <= ${ageMax}`);
+
+  // Date/time range
+  const dateCol  = state.dateCol;
+  const dateFrom = document.getElementById('date-from').value;
+  const dateTo   = document.getElementById('date-to').value;
+  if (dateFrom) where.push(`s.${dateCol} >= '${dateFrom.replace('T', ' ')}'`);
+  if (dateTo)   where.push(`s.${dateCol} <= '${dateTo.replace('T', ' ')}'`);
 
   if (where.length) {
     lines.push(`WHERE`);
@@ -1449,6 +1525,9 @@ function buildPayload() {
     writing_style:     state.styleFilter,
     age_min:           parseInt(document.getElementById('age-min').value) || null,
     age_max:           parseInt(document.getElementById('age-max').value) || null,
+    date_col:          state.dateCol,
+    date_from:         document.getElementById('date-from').value || null,
+    date_to:           document.getElementById('date-to').value || null,
   };
 }
 

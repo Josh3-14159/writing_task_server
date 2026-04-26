@@ -9,13 +9,20 @@ Also serves the researcher export tool and provides CSV export endpoints.
 Usage
 -----
   export DATABASE_URL="postgresql://user:pass@localhost/handwriting"
+  export READONLY_DATABASE_URL="postgresql://readonly:pass@localhost/handwriting"
   python3 server.py                  # default port 8080
   python3 server.py --port 3000
 
 Environment variables
 ---------------------
-  DATABASE_URL   (required) psycopg2-compatible connection string
-  PORT           optional fallback if --port is not passed
+  DATABASE_URL          (required) psycopg2-compatible connection string.
+                        Used for all participant-facing read/write operations.
+  READONLY_DATABASE_URL (strongly recommended) A separate connection string
+                        for a database user granted SELECT-only privileges.
+                        Used exclusively by the researcher export endpoints.
+                        Falls back to DATABASE_URL with a startup warning if
+                        not set, but this is not recommended in production.
+  PORT                  Optional fallback if --port is not passed.
 
 Dependencies
 ------------
@@ -72,13 +79,27 @@ if not DATABASE_URL:
     sys.exit('ERROR: DATABASE_URL environment variable is not set.\n'
              'Example: export DATABASE_URL="postgresql://user:pass@localhost/handwriting"')
 
+READONLY_DATABASE_URL = os.environ.get('READONLY_DATABASE_URL')
+# Checked at startup — see __main__ block.
+
 # ---------------------------------------------------------------------------
 # Database helpers
 # ---------------------------------------------------------------------------
 
 def get_conn():
-    """Return a new psycopg2 connection with autocommit off."""
+    """Return a new psycopg2 connection with autocommit off (read/write)."""
     return psycopg2.connect(DATABASE_URL)
+
+
+def get_readonly_conn():
+    """
+    Return a connection using the read-only database user.
+    Used exclusively by the researcher export endpoints so that
+    even a compromised or malformed query cannot mutate data.
+    Falls back to the main DATABASE_URL if READONLY_DATABASE_URL is unset
+    (the startup warning makes this visible to the operator).
+    """
+    return psycopg2.connect(READONLY_DATABASE_URL or DATABASE_URL)
 
 
 def _ts():
@@ -586,6 +607,22 @@ class Handler(BaseHTTPRequestHandler):
             conditions.append('s.age <= %s')
             params.append(int(age_max))
 
+        # Date/time range filter
+        # date_col is either 'started_at' or 'completed_at' (validated below).
+        # date_from with no date_to  → col >= date_from  (after this moment)
+        # date_to   with no date_from → col <= date_to   (before this moment)
+        # Both provided              → col BETWEEN date_from AND date_to
+        date_col_raw = body.get('date_col', 'started_at')
+        date_col = date_col_raw if date_col_raw in ('started_at', 'completed_at') else 'started_at'
+        date_from = body.get('date_from')   # ISO-8601 string or None
+        date_to   = body.get('date_to')     # ISO-8601 string or None
+        if date_from:
+            conditions.append(f's.{date_col} >= %s')
+            params.append(date_from)
+        if date_to:
+            conditions.append(f's.{date_col} <= %s')
+            params.append(date_to)
+
         if conditions:
             sql += 'WHERE ' + '\n  AND '.join(conditions) + '\n'
 
@@ -613,7 +650,7 @@ class Handler(BaseHTTPRequestHandler):
         sql, params = self._build_export_query(body, count_only=True)
 
         try:
-            with get_conn() as conn:
+            with get_readonly_conn() as conn:
                 with conn.cursor() as cur:
                     cur.execute(sql, params)
                     row = cur.fetchone()
@@ -639,7 +676,7 @@ class Handler(BaseHTTPRequestHandler):
         sql, params = self._build_export_query(body, count_only=False)
 
         try:
-            with get_conn() as conn:
+            with get_readonly_conn() as conn:
                 with conn.cursor() as cur:
                     cur.execute(sql, params)
                     col_names = [desc[0] for desc in cur.description]
@@ -745,6 +782,18 @@ if __name__ == '__main__':
         print(f'Database connection OK')
     except psycopg2.OperationalError as e:
         sys.exit(f'ERROR: Cannot connect to database:\n  {e}')
+
+    if not READONLY_DATABASE_URL:
+        print('WARNING: READONLY_DATABASE_URL is not set.')
+        print('         Export endpoints will use the main DATABASE_URL.')
+        print('         Set READONLY_DATABASE_URL to a SELECT-only user in production.\n')
+    else:
+        try:
+            rc = get_readonly_conn()
+            rc.close()
+            print(f'Read-only database connection OK')
+        except psycopg2.OperationalError as e:
+            sys.exit(f'ERROR: Cannot connect with READONLY_DATABASE_URL:\n  {e}')
 
     print(f'Handwriting study server  —  http://0.0.0.0:{args.port}')
     print(f'Tasks directory:            {TASKS_DIR}')

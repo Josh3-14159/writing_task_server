@@ -11,6 +11,7 @@ project/
 ├── pencil-capture.html        Participant-facing application
 ├── researcher-export.html     Researcher data export tool (served at /export)
 ├── server.py                  HTTP server (Python 3, psycopg2)
+├── watchdog.py                Daemon — keeps server.py alive, auto-restarts on exit
 ├── schema.sql                 PostgreSQL schema — run once to initialise
 └── tasks/
     ├── tasks.json             Master task configuration
@@ -66,11 +67,24 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO remote_readonly;
 
 ### 3. Set environment variables and start the server
 
+Run the server via `watchdog.py` (recommended). The watchdog keeps `server.py` alive and automatically restarts it if it exits for any reason.
+
 ```bash
 export DATABASE_URL="postgresql://muon@/handwriting"
 export READONLY_DATABASE_URL="host=localhost dbname=handwriting user=remote_readonly password=<your-password-here>"
-python3 server.py              # default port 8080
-python3 server.py --port 3000  # custom port
+
+# Recommended: run in the background via nohup so it survives terminal/SSH disconnect
+nohup python3 watchdog.py --port 8080 > server.log 2>&1 &
+echo $! > watchdog.pid
+
+tail -f server.log           # monitor output
+kill $(cat watchdog.pid)     # stop the watchdog and server
+```
+
+To run on a custom port:
+```bash
+nohup python3 watchdog.py --port 3000 > server.log 2>&1 &
+echo $! > watchdog.pid
 ```
 
 > **Note on `READONLY_DATABASE_URL` format:** Use the keyword format (`host=... dbname=... user=... password=...`) rather than a URL (`postgresql://...`) if your password contains special characters such as `@`, `#`, or `!`. The keyword format does not require percent-encoding.
@@ -87,16 +101,6 @@ http://<server-ip>:<port>
 The researcher export tool is available at:
 ```
 http://<server-ip>:<port>/export
-```
-
-### Run detached
-
-```bash
-nohup python3 server.py --port 8080 > server.log 2>&1 &
-echo $! > server.pid
-
-tail -f server.log          # monitor
-kill $(cat server.pid)      # stop
 ```
 
 ### Reset the database (testing only)

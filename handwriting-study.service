@@ -1,0 +1,75 @@
+# handwriting-study.service
+# ─────────────────────────────────────────────────────────────────────────────
+# systemd service unit for the Handwriting Study web server + watchdog.
+#
+# Installation
+# ────────────
+#   1. Copy this file to /etc/systemd/system/handwriting-study.service
+#   2. Edit the variables under [Service] to match your environment.
+#   3. sudo systemctl daemon-reload
+#   4. sudo systemctl enable --now handwriting-study
+#
+# Useful commands
+# ───────────────
+#   sudo systemctl status   handwriting-study
+#   sudo systemctl restart  handwriting-study
+#   sudo systemctl stop     handwriting-study
+#   sudo journalctl -u handwriting-study -f          # follow logs
+#   sudo journalctl -u handwriting-study --since today
+#
+# Config reload (SIGHUP → watchdog restarts server.py without exiting itself)
+# ────────────────────────────────────────────────────────────────────────────
+#   sudo systemctl kill --signal=SIGHUP handwriting-study
+# ─────────────────────────────────────────────────────────────────────────────
+
+[Unit]
+Description=Handwriting Study Web Server (watchdog)
+Documentation=https://github.com/your-org/handwriting-study
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+
+# ── Edit these ───────────────────────────────────────────────────────────────
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/handwriting-study
+
+ExecStart=/usr/bin/python3 /opt/handwriting-study/watchdog.py --port 8080
+
+# Required: main database connection
+Environment="DATABASE_URL=postgresql://user:pass@localhost/handwriting"
+
+# Strongly recommended: read-only user for the /export endpoints
+Environment="READONLY_DATABASE_URL=postgresql://readonly:pass@localhost/handwriting"
+
+# Optional watchdog tuning
+Environment="WATCHDOG_MAX_RESTARTS=5"
+Environment="WATCHDOG_BACKOFF_SEC=30"
+Environment="WATCHDOG_MIN_UPTIME_SEC=10"
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Send SIGTERM on stop/restart, wait up to 15 s, then SIGKILL.
+KillSignal=SIGTERM
+TimeoutStopSec=15
+KillMode=mixed
+
+# Restart the *watchdog* itself if it ever exits unexpectedly.
+# (The watchdog handles server.py restarts internally.)
+Restart=on-failure
+RestartSec=5
+
+# Redirect stdout/stderr to journald
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=handwriting-study
+
+# Basic hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/handwriting-study
+
+[Install]
+WantedBy=multi-user.target

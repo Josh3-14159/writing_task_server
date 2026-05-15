@@ -909,11 +909,17 @@ function loadRep() {
   // Prompt banner
   // For sentence tasks the text comes from sessionSentences (fetched from
   // the server after session creation) rather than the static tasks.json prompt field.
+  // sessionSentences is ordered by task_index so we can index directly by repIndex.
   const pb = document.getElementById('prompt-banner');
   let promptText = task.prompt;
   if (task.task_name === 'sentence') {
-    const assigned = sessionSentences.find(s => s.task_index === repIndex);
-    promptText = assigned ? assigned.text : null;
+    const assigned = sessionSentences[repIndex];
+    if (assigned) {
+      promptText = assigned.text;
+    } else {
+      console.warn('No sentence assigned for repIndex', repIndex, '— sessionSentences:', sessionSentences);
+      promptText = null;
+    }
   }
   if (promptText) {
     pb.textContent = promptText;
@@ -1353,7 +1359,7 @@ async function advanceTask() {
     // canvas does not reload between reps so loadRep() is not called here.
     if (task.task_name === 'sentence') {
       const pb       = document.getElementById('prompt-banner');
-      const assigned = sessionSentences.find(s => s.task_index === repIndex);
+      const assigned = sessionSentences[repIndex];
       if (assigned) {
         pb.textContent = assigned.text;
         pb.classList.remove('hidden');

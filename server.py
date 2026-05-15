@@ -364,11 +364,13 @@ class Handler(BaseHTTPRequestHandler):
                 cur.execute(
                     """
                     INSERT INTO session_sentences (session_id, task_index, sentence_id)
-                    SELECT %s, row_number() OVER () - 1, id
-                    FROM sentences
-                    WHERE active = true
-                    ORDER BY random()
-                    LIMIT %s
+                    SELECT %s, row_number() OVER (ORDER BY random()) - 1, id
+                    FROM (
+                        SELECT id FROM sentences
+                        WHERE active = true
+                        ORDER BY random()
+                        LIMIT %s
+                    ) sub
                     """,
                     (session_id, SENTENCES_PER_SESSION)
                 )

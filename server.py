@@ -39,7 +39,7 @@ import secrets
 import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from http.cookies import SimpleCookie
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 
 import psycopg2
 import psycopg2.extras
@@ -53,6 +53,9 @@ TASKS_DIR   = os.path.join(ROOT_DIR, 'tasks')
 TASKS_JSON  = os.path.join(TASKS_DIR, 'tasks.json')
 MAIN_HTML   = os.path.join(ROOT_DIR, 'pencil-capture.html')
 EXPORT_HTML = os.path.join(ROOT_DIR, 'researcher-export.html')
+
+# Number of sentences randomly assigned to each session.
+SENTENCES_PER_SESSION = 5
 
 # Valid task_name values must match the strokes partition list in schema.sql.
 # The server validates every /strokes POST against this set so a misconfigured
@@ -115,7 +118,8 @@ class Handler(BaseHTTPRequestHandler):
     # ── routing ─────────────────────────────────────────────────────────────
 
     def do_GET(self):
-        path = urlparse(self.path).path.rstrip('/')
+        parsed = urlparse(self.path)
+        path   = parsed.path.rstrip('/')
 
         if path in ('', '/'):
             self._serve_file(MAIN_HTML, 'text/html; charset=utf-8')
@@ -133,6 +137,9 @@ class Handler(BaseHTTPRequestHandler):
 
         elif path == '/session/check':
             self._handle_session_check()
+
+        elif path == '/session/sentences':
+            self._handle_session_sentences(parsed)
 
         elif path == '/export':
             self._serve_file(EXPORT_HTML, 'text/html; charset=utf-8')
@@ -270,13 +277,13 @@ class Handler(BaseHTTPRequestHandler):
 
     def _handle_session_create(self):
         """
-        Create a new session from the submitted intake form.
+        Create a new session from the submitted intake form, and immediately
+        assign SENTENCES_PER_SESSION randomly selected active sentences to it.
 
         Body (JSON) — all optional except consent
         ------------------------------------------
         {
-          "token": "<32-char hex>",      // read from cookie server-side? No —
-                                         // client echoes it back for simplicity
+          "token": "<32-char hex>",
           "age": 42,
           "gender": "female",
           "handedness": "right",
@@ -293,6 +300,11 @@ class Handler(BaseHTTPRequestHandler):
         }
 
         Response: { "session_id": "<uuid>" }
+
+        The sentence assignment is written to session_sentences in the same
+        transaction. If the sentences table has fewer than SENTENCES_PER_SESSION
+        active rows the server returns 500; seed the sentences table before
+        accepting participants.
         """
         body = self._read_json()
         if body is None:
@@ -303,13 +315,14 @@ class Handler(BaseHTTPRequestHandler):
             self._respond(400, b'Invalid token')
             return
 
-        # Ensure token row exists (it should — /session/check always creates it)
         with get_conn() as conn:
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                # Ensure token row exists (it should — /session/check always creates it)
                 cur.execute(
                     "INSERT INTO device_tokens (token) VALUES (%s) ON CONFLICT DO NOTHING",
                     (token,)
                 )
+
                 cur.execute(
                     """
                     INSERT INTO sessions (
@@ -344,10 +357,93 @@ class Handler(BaseHTTPRequestHandler):
                     )
                 )
                 session_id = str(cur.fetchone()['id'])
+
+                # Assign a random selection of active sentences to this session.
+                # The subquery draws SENTENCES_PER_SESSION rows in a single
+                # round-trip; task_index is the 0-based display position.
+                cur.execute(
+                    """
+                    INSERT INTO session_sentences (session_id, task_index, sentence_id)
+                    SELECT %s, row_number() OVER () - 1, id
+                    FROM sentences
+                    WHERE active = true
+                    ORDER BY random()
+                    LIMIT %s
+                    """,
+                    (session_id, SENTENCES_PER_SESSION)
+                )
+
+                # Sanity-check: if the sentences table was empty or underpopulated,
+                # the INSERT above silently inserted fewer rows than expected.
+                # Detect this and roll back rather than silently produce a broken session.
+                cur.execute(
+                    "SELECT COUNT(*) FROM session_sentences WHERE session_id = %s",
+                    (session_id,)
+                )
+                assigned = cur.fetchone()['count']
+                if assigned < SENTENCES_PER_SESSION:
+                    conn.rollback()
+                    msg = (
+                        f'Not enough active sentences: need {SENTENCES_PER_SESSION}, '
+                        f'got {assigned}. Seed the sentences table before accepting participants.'
+                    )
+                    print(f'[{_ts()}]  ERROR  {msg}')
+                    self._respond(500, msg.encode())
+                    return
+
             conn.commit()
 
-        print(f'[{_ts()}]  Session created  id={session_id}  token={token[:8]}…')
+        print(
+            f'[{_ts()}]  Session created  id={session_id}  token={token[:8]}…  '
+            f'sentences={assigned}'
+        )
         self._json({'session_id': session_id})
+
+    def _handle_session_sentences(self, parsed):
+        """
+        GET /session/sentences?session_id=<uuid>
+
+        Returns the ordered list of sentences assigned to the session so the
+        frontend can display each one during the 'sentence' writing task.
+
+        Response JSON
+        -------------
+        [
+          { "task_index": 0, "sentence_id": 12, "text": "The quick brown fox…" },
+          { "task_index": 1, "sentence_id": 47, "text": "…" },
+          …
+        ]
+
+        task_index matches strokes.task_index for task_name = 'sentence',
+        allowing direct join from stroke data back to sentence text.
+        """
+        qs = parse_qs(parsed.query)
+        session_id_list = qs.get('session_id', [])
+        if not session_id_list:
+            self._respond(400, b'Missing session_id query parameter')
+            return
+        session_id = session_id_list[0]
+
+        with get_conn() as conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT ss.task_index, ss.sentence_id, sen.text
+                    FROM session_sentences ss
+                    JOIN sentences sen ON sen.id = ss.sentence_id
+                    WHERE ss.session_id = %s
+                    ORDER BY ss.task_index
+                    """,
+                    (session_id,)
+                )
+                rows = cur.fetchall()
+
+        if not rows:
+            # Either the session_id is unknown or sentences were never assigned.
+            self._respond(404, b'No sentences found for this session')
+            return
+
+        self._json([dict(r) for r in rows])
 
     def _handle_session_complete(self):
         """
@@ -419,6 +515,9 @@ class Handler(BaseHTTPRequestHandler):
           ]
         }
 
+        For task_name = 'sentence', task_index must correspond to a row in
+        session_sentences for this session (validated below).
+
         Response: { "inserted": <int> }
         """
         body = self._read_json()
@@ -447,6 +546,28 @@ class Handler(BaseHTTPRequestHandler):
         if errors:
             self._respond(400, json.dumps({'errors': errors}).encode())
             return
+
+        # For sentence tasks, verify the task_index is a valid assignment for
+        # this session. This prevents orphaned stroke rows caused by a
+        # misconfigured frontend sending an out-of-range task_index.
+        if task_name == 'sentence':
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        SELECT 1 FROM session_sentences
+                        WHERE session_id = %s AND task_index = %s
+                        """,
+                        (session_id, task_index)
+                    )
+                    if cur.fetchone() is None:
+                        self._respond(400, json.dumps({
+                            'errors': [
+                                f'task_index {task_index} is not a valid sentence '
+                                f'assignment for session {session_id}'
+                            ]
+                        }).encode())
+                        return
 
         rows = [
             (
@@ -503,9 +624,16 @@ class Handler(BaseHTTPRequestHandler):
         interpolated into the SELECT list — they cannot be passed as psycopg2
         parameters. All filter values travel as parameters.
 
+        If 'sentence_text' is requested as a column, the query automatically
+        LEFT JOINs session_sentences and sentences so the text is available.
+        The join is a LEFT JOIN so non-sentence rows are included as NULL
+        rather than excluded.
+
         If count_only=True the SELECT returns aggregate counts only (used by
         /export/preview to estimate result size without fetching all rows).
         """
+        need_sentence_join = False
+
         if count_only:
             select_clause = (
                 'COUNT(*) AS total_points, '
@@ -517,6 +645,12 @@ class Handler(BaseHTTPRequestHandler):
             for col in requested:
                 if col == 'session_id':
                     safe_parts.append('st.session_id')
+                elif col == 'sentence_text':
+                    safe_parts.append('sen.text AS sentence_text')
+                    need_sentence_join = True
+                elif col == 'sentence_id':
+                    safe_parts.append('ss.sentence_id')
+                    need_sentence_join = True
                 elif col in EXPORT_STROKE_COLS:
                     safe_parts.append(f'st.{col}')
                 # silently skip any unrecognised column names
@@ -529,6 +663,15 @@ class Handler(BaseHTTPRequestHandler):
             f'FROM strokes st\n'
             f'JOIN sessions s ON st.session_id = s.id\n'
         )
+
+        if need_sentence_join:
+            sql += (
+                'LEFT JOIN session_sentences ss\n'
+                '       ON ss.session_id = st.session_id\n'
+                '      AND ss.task_index = st.task_index\n'
+                '      AND st.task_name  = \'sentence\'\n'
+                'LEFT JOIN sentences sen ON sen.id = ss.sentence_id\n'
+            )
 
         params = []
         conditions = []
@@ -794,6 +937,23 @@ if __name__ == '__main__':
             print(f'Read-only database connection OK')
         except psycopg2.OperationalError as e:
             sys.exit(f'ERROR: Cannot connect with READONLY_DATABASE_URL:\n  {e}')
+
+    # Warn if the sentences table is underpopulated.
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM sentences WHERE active = true")
+                active_sentences = cur.fetchone()[0]
+        if active_sentences < SENTENCES_PER_SESSION:
+            print(
+                f'WARNING: Only {active_sentences} active sentence(s) in the sentences table '
+                f'(need at least {SENTENCES_PER_SESSION}).\n'
+                f'         Seed the table before accepting participants or session creation will fail.\n'
+            )
+        else:
+            print(f'Sentences available: {active_sentences} active (need {SENTENCES_PER_SESSION} per session)')
+    except psycopg2.ProgrammingError:
+        print('WARNING: Could not query sentences table — has the schema been applied?')
 
     print(f'Handwriting study server  —  http://0.0.0.0:{args.port}')
     print(f'Tasks directory:            {TASKS_DIR}')

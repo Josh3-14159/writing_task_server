@@ -115,10 +115,10 @@
       "task_name": "sentence",
       "task_type": "writing",
       "orientation": null,
-      "repetitions": 1,
+      "repetitions": 5,
       "canvas_html": "trace_writing_lines.html",
       "instruction": "Copy the sentence below in your natural handwriting, on the lines provided.",
-      "prompt": "The quick brown fox jumps over the lazy dog.",
+      "prompt": null,
       "label": "Sentence"
     }
   ]

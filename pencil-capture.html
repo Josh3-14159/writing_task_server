@@ -672,10 +672,11 @@
 // APPLICATION STATE
 // ══════════════════════════════════════════════════════════════
 
-let TASKS        = [];        // loaded from /tasks at startup
-let deviceToken  = null;      // 32-char hex, echoed from cookie
-let sessionId    = null;      // UUID assigned after intake form
-let deviceStatus = 'fresh';   // fresh | restart | warn_completed
+let TASKS            = [];        // loaded from /tasks at startup
+let deviceToken      = null;      // 32-char hex, echoed from cookie
+let sessionId        = null;      // UUID assigned after intake form
+let deviceStatus     = 'fresh';   // fresh | restart | warn_completed
+let sessionSentences = [];        // [{task_index, sentence_id, text}, …] fetched after session create
 
 // Task navigation
 //   taskGroupIndex : which entry in TASKS[] we are on
@@ -824,6 +825,12 @@ document.getElementById('btn-begin').addEventListener('click', async () => {
     if (!res.ok) throw new Error('Server error creating session');
     const data = await res.json();
     sessionId = data.session_id;
+
+    // Fetch the sentence assignments for this session so they are ready
+    // before the first sentence rep is displayed.
+    const sr = await fetch(`/session/sentences?session_id=${sessionId}`);
+    if (!sr.ok) throw new Error('Server error fetching sentences');
+    sessionSentences = await sr.json();   // [{task_index, sentence_id, text}, …]
   } catch (err) {
     document.getElementById('form-error').textContent = 'Could not connect to server. Please try again.';
     document.getElementById('form-error').classList.add('visible');
@@ -900,9 +907,16 @@ function loadRep() {
   }
 
   // Prompt banner
+  // For sentence tasks the text comes from sessionSentences (fetched from
+  // the server after session creation) rather than the static tasks.json prompt field.
   const pb = document.getElementById('prompt-banner');
-  if (task.prompt) {
-    pb.textContent = task.prompt;
+  let promptText = task.prompt;
+  if (task.task_name === 'sentence') {
+    const assigned = sessionSentences.find(s => s.task_index === repIndex);
+    promptText = assigned ? assigned.text : null;
+  }
+  if (promptText) {
+    pb.textContent = promptText;
     pb.classList.remove('hidden');
   } else {
     pb.classList.add('hidden');
@@ -1335,6 +1349,18 @@ async function advanceTask() {
     clearCanvas();
     const repEl = document.getElementById('rep-indicator');
     repEl.textContent = `Rep ${repIndex + 1} of ${task.repetitions}`;
+    // Update the prompt banner in-place for sentence tasks — the guide
+    // canvas does not reload between reps so loadRep() is not called here.
+    if (task.task_name === 'sentence') {
+      const pb       = document.getElementById('prompt-banner');
+      const assigned = sessionSentences.find(s => s.task_index === repIndex);
+      if (assigned) {
+        pb.textContent = assigned.text;
+        pb.classList.remove('hidden');
+      } else {
+        pb.classList.add('hidden');
+      }
+    }
     setLive(false);
   } else if (taskGroupIndex < TASKS.length - 1) {
     loadTaskGroup(taskGroupIndex + 1);

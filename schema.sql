@@ -41,9 +41,41 @@ CREATE TABLE IF NOT EXISTS sessions (
     consent_at              TIMESTAMPTZ
 );
 
+-- ── sentences ─────────────────────────────────────────────────
+-- Corpus of sentences shown during the 'sentence' writing task.
+-- Rows should never be deleted once referenced by session_sentences;
+-- use active = false to retire a sentence from future assignments.
+CREATE TABLE IF NOT EXISTS sentences (
+    id      SMALLSERIAL PRIMARY KEY,
+    text    TEXT        NOT NULL,
+    active  BOOLEAN     NOT NULL DEFAULT true
+);
+
+CREATE INDEX IF NOT EXISTS idx_sentences_active ON sentences (active);
+
+-- ── session_sentences ─────────────────────────────────────────
+-- Records which sentences were assigned to each session, and in
+-- what order. task_index here is the same value stored in
+-- strokes.task_index for task_name = 'sentence', allowing a direct
+-- join from any stroke point back to the sentence that produced it.
+CREATE TABLE IF NOT EXISTS session_sentences (
+    session_id  UUID     NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    task_index  INT      NOT NULL,   -- 0-based display order for this session
+    sentence_id SMALLINT NOT NULL REFERENCES sentences(id),
+    PRIMARY KEY (session_id, task_index)
+);
+
+CREATE INDEX IF NOT EXISTS idx_session_sentences_session_id
+    ON session_sentences (session_id);
+
+CREATE INDEX IF NOT EXISTS idx_session_sentences_sentence_id
+    ON session_sentences (sentence_id);
+
 -- ── strokes (partitioned by task_name) ───────────────────────
 -- One row per captured sample point. Partition key must be included
 -- in any unique/primary key constraint on a partitioned table.
+-- For task_name = 'sentence', join to session_sentences on
+-- (session_id, task_index) to recover the sentence text.
 CREATE TABLE IF NOT EXISTS strokes (
     id              BIGSERIAL,
     session_id      UUID NOT NULL,
@@ -116,3 +148,17 @@ SELECT
 FROM strokes st
 JOIN sessions s ON st.session_id = s.id
 GROUP BY s.id, s.token, st.task_type, st.task_name, st.orientation, st.task_index;
+
+-- Extends task_summary for sentence tasks only, joining in the
+-- assigned sentence text for each (session, task_index) pair.
+CREATE OR REPLACE VIEW sentence_task_summary AS
+SELECT
+    ts.*,
+    ss.sentence_id,
+    sen.text AS sentence_text
+FROM task_summary ts
+JOIN session_sentences ss
+    ON ss.session_id = ts.session_id
+   AND ss.task_index = ts.task_index
+JOIN sentences sen ON sen.id = ss.sentence_id
+WHERE ts.task_name = 'sentence';

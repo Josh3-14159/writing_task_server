@@ -1,0 +1,23 @@
+ERROR: DATABASE_URL environment variable is not set.
+Example: export DATABASE_URL="postgresql://user:pass@localhost/handwriting"
+ERROR: DATABASE_URL environment variable is not set.
+Example: export DATABASE_URL="postgresql://user:pass@localhost/handwriting"
+Database connection OK
+Read-only database connection OK
+Handwriting study server  —  http://0.0.0.0:8080
+Tasks directory:            /home/muon/writing_task_server/tasks
+Researcher export tool:     http://0.0.0.0:8080/export
+Ctrl+C to stop.
+
+Traceback (most recent call last):
+  File "/home/muon/writing_task_server/server.py", line 802, in <module>
+    HTTPServer(('0.0.0.0', args.port), Handler).serve_forever()
+  File "/usr/lib/python3.12/socketserver.py", line 235, in serve_forever
+    ready = selector.select(poll_interval)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/selectors.py", line 415, in select
+    fd_event_list = self._selector.poll(timeout)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
+usage: server.py [-h] [--port PORT]
+server.py: error: unrecognized arguments: 12345
